@@ -1,0 +1,55 @@
+name: Générer les archives de release
+
+# À chaque étiquette de version (ex. v1.0-moodle45), compresse les deux
+# plugins et les attache à la release GitHub -- ce sont ces .zip que
+# Moodle attend dans « Installer des plugins ».
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Récupérer ce dépôt
+        uses: actions/checkout@v4
+
+      - name: Vérifier la cohérence des versions
+        run: |
+          # Moodle refuse une mise à jour si le numéro de version du plugin
+          # n'a pas augmenté -- on l'affiche ici pour le retrouver
+          # facilement dans les notes de release.
+          grep -H 'plugin->version' qtype_webwork/version.php qbehaviour_webwork/version.php qbank_webworkimport/version.php
+
+      - name: Compresser les plugins
+        run: |
+          zip -r qtype_webwork.zip qtype_webwork -x '*.DS_Store' '*/.git/*'
+          zip -r qbehaviour_webwork.zip qbehaviour_webwork -x '*.DS_Store' '*/.git/*'
+          zip -r qbank_webworkimport.zip qbank_webworkimport -x '*.DS_Store' '*/.git/*'
+
+      - name: Attacher les archives à la release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            qtype_webwork.zip
+            qbehaviour_webwork.zip
+            qbank_webworkimport.zip
+
+      # Sur un déclenchement manuel (sans étiquette), on garde quand même
+      # les archives comme artefact téléchargeable, utile pour tester une
+      # version avant de publier.
+      - name: Conserver les archives (déclenchement manuel)
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugins
+          path: |
+            qtype_webwork.zip
+            qbehaviour_webwork.zip
+            qbank_webworkimport.zip

@@ -1,0 +1,47 @@
+{
+    "flags": {
+        "ANSWER_ENTRY_ORDER": ["AnSwEr0001", "AnSwEr0002"],
+        "KEPT_EXTRA_ANSWERS": ["MaThQuIlL_AnSwEr0001", "MaThQuIlL_AnSwEr0002", "AnSwEr0001", "AnSwEr0002"]
+    },
+    "problem_result": {
+        "errors": "",
+        "msg": "You can earn partial credit on this problem.",
+        "score": 0.5,
+        "type": "avg_problem_grader"
+    },
+    "problem_state": {
+        "num_of_correct_ans": 0,
+        "num_of_incorrect_ans": 1,
+        "recorded_score": 0.5
+    },
+    "renderedHTML": "<!DOCTYPE html><html><head></head><body><div class=\"container-fluid\"><form action=\"http://192.168.50.158:3000/render-api\" class=\"problem-main-form\" id=\"problemMainForm\" method=\"POST\" name=\"problemMainForm\"><div id=\"problem_body\"><input aria-label=\"answer 1\" id=\"AnSwEr0001\" name=\"AnSwEr0001\" size=\"25\" type=\"text\" value=\"3\"><input id=\"MaThQuIlL_AnSwEr0001\" name=\"MaThQuIlL_AnSwEr0001\" type=\"hidden\" value=\"3\"><input name=\"previous_AnSwEr0001\" type=\"hidden\" value=\"3\"><input aria-label=\"answer 2\" id=\"AnSwEr0002\" name=\"AnSwEr0002\" size=\"25\" type=\"text\" value=\"\"><input id=\"MaThQuIlL_AnSwEr0002\" name=\"MaThQuIlL_AnSwEr0002\" type=\"hidden\" value=\"\"><input name=\"previous_AnSwEr0002\" type=\"hidden\" value=\"\"></div><input name=\"sessionJWT\" type=\"hidden\" value=\"FAKE.JWT.FORTEST\"><div class=\"submit-buttons-container\"><input name=\"previewAnswers\" type=\"submit\" value=\"Preview My Answers\"><input name=\"submitAnswers\" type=\"submit\" value=\"Submit Answers\"><input name=\"showCorrectAnswers\" type=\"submit\" value=\"Show Correct Answers\"></div></form></div></body></html>",
+    "resources": {
+        "assets": [
+            "pg_files/js/Problem/problem.ba2d1495.min.css",
+            "pg_files/js/Knowls/knowl.4c1a9011.min.css",
+            "pg_files/js/ImageView/imageview.a928ea73.min.css",
+            "pg_files/node_modules/mathquill/dist/mathquill.css?version=github%3Aopenwebwork%2Fmathquill%40WeBWorK-2.19",
+            "pg_files/js/MathQuill/mqeditor.ad211705.min.css",
+            "css/bootstrap.8fd0bc9a.min.css",
+            "node_modules/jquery-ui-dist/jquery-ui.min.css?version=%5E1.13.2",
+            "node_modules/@fortawesome/fontawesome-free/css/all.min.css?version=%5E6.2.1",
+            "pg_files/js/Feedback/feedback.6472e266.min.js",
+            "pg_files/js/Base64/Base64.40f8ebee.min.js",
+            "pg_files/js/Knowls/knowl.a585a7a0.min.js",
+            "pg_files/js/Problem/details-accordion.349202cd.min.js",
+            "pg_files/js/ImageView/imageview.29b8afd5.min.js",
+            "pg_files/js/Essay/essay.f2167a92.min.js",
+            "pg_files/node_modules/mathquill/dist/mathquill.js?version=github%3Aopenwebwork%2Fmathquill%40WeBWorK-2.19",
+            "pg_files/js/MathQuill/mqeditor.8ad94a78.min.js",
+            "node_modules/jquery/dist/jquery.min.js?version=%5E3.6.3",
+            "node_modules/jquery-ui-dist/jquery-ui.min.js?version=%5E1.13.2",
+            "node_modules/iframe-resizer/js/iframeResizer.contentWindow.min.js?version=%5E4.3.2",
+            "js/apps/MathJaxConfig/mathjax-config.b8d7d472.min.js",
+            "node_modules/mathjax/es5/tex-svg.js?version=%5E3.2.2",
+            "node_modules/bootstrap/dist/js/bootstrap.bundle.min.js?version=%7E5.2.3",
+            "js/apps/Problem/problem.282d34fb.min.js",
+            "js/apps/Problem/submithelper.384c1f79.min.js",
+            "js/apps/CSSMessage/css-message.f1da4668.min.js"
+        ]
+    }
+}
