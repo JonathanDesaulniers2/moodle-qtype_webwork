@@ -12,7 +12,7 @@ Trois plugins à installer ensemble :
 
 **Compatibilité** : Moodle 4.5 (testé sur 4.5.1+). Une version pour Moodle 5.3 est prévue.
 
-Les trois dépendent d'un [renderer WeBWorK](https://github.com/JonathanDesaulniers/webwork-renderer)
+Les trois dépendent d'un [renderer WeBWorK](https://github.com/JonathanDesaulniers2/webwork-renderer)
 accessible sur le réseau — installez-le d'abord. Des images Docker pré-construites sont
 disponibles (variantes française et internationale), ou vous pouvez la construire vous-même.
 
@@ -23,7 +23,7 @@ avant lui.
 
 1. *Administration du site → Plugins → Installer des plugins*
 2. Téléchargez les trois `.zip` depuis la
-   [dernière release](https://github.com/JonathanDesaulniers/moodle-qtype_webwork/releases),
+   [dernière release](https://github.com/JonathanDesaulniers2/moodle-qtype_webwork/releases),
    ou compressez vous-même chaque dossier de ce dépôt
 3. Téléversez **`qtype_webwork.zip` en premier**, confirmez la mise à jour de la base de données
 4. Puis `qbehaviour_webwork.zip`, puis `qbank_webworkimport.zip`
@@ -75,7 +75,7 @@ sudo docker run -d --name webwork-caddy --restart unless-stopped \
 ```
 
 Remplacez les chemins des volumes `-v` par les vôtres — ils doivent correspondre exactement aux
-dossiers montés dans le conteneur du renderer (voir [dépôt du renderer](https://github.com/JonathanDesaulniers/webwork-renderer)).
+dossiers montés dans le conteneur du renderer (voir [dépôt du renderer](https://github.com/JonathanDesaulniers2/webwork-renderer)).
 
 ## 3. Configuration du plugin (réglages admin)
 
@@ -101,11 +101,11 @@ dossiers montés dans le conteneur du renderer (voir [dépôt du renderer](https
 4. Réglez le mode de notation, les indices/solutions, la graine aléatoire, et l'**aide à la
    saisie mathématique** (MathQuill, MathView, ou aucun éditeur — MathView par défaut). Ce
    choix nécessite que le renderer ait bien le correctif `patch_renderproblem.pl` appliqué (voir
-   [docs/PATCHES.md](https://github.com/JonathanDesaulniers/webwork-renderer/blob/main/docs/PATCHES.md))
+   [docs/PATCHES.md](https://github.com/JonathanDesaulniers2/webwork-renderer/blob/main/docs/PATCHES.md))
    pour que MathView fonctionne réellement — sans lui, MathQuill s'affiche toujours peu importe
    ce choix.
 5. **Aide à la saisie des réponses** : MathView (par défaut), MathQuill, ou aucun éditeur assisté
-   — voir le [docs/PATCHES.md](https://github.com/JonathanDesaulniers/webwork-renderer/blob/main/docs/PATCHES.md)
+   — voir le [docs/PATCHES.md](https://github.com/JonathanDesaulniers2/webwork-renderer/blob/main/docs/PATCHES.md)
    pour le détail des correctifs nécessaires côté serveur pour que ce choix fonctionne réellement
 6. Enregistrez — la question est prête à être ajoutée à un quiz
 
@@ -174,7 +174,7 @@ secret partagé configuré dans ce plugin protège uniquement la **navigation** 
 (noms de fichiers), **pas** le rendu des problèmes lui-même.
 
 **La seule protection réellement efficace pour `/render-api` est la restriction réseau** — voir
-la section pare-feu du [docs/INSTALLATION.md](https://github.com/JonathanDesaulniers/webwork-renderer/blob/main/docs/INSTALLATION.md#pare-feu--sécurité-réseau).
+la section pare-feu du [docs/INSTALLATION.md](https://github.com/JonathanDesaulniers2/webwork-renderer/blob/main/docs/INSTALLATION.md#pare-feu--sécurité-réseau).
 Assurez-vous que seul votre serveur Moodle peut atteindre le renderer, avant de mettre ce
 plugin en production avec de vrais étudiants.
 
@@ -185,11 +185,11 @@ Autres couches de sécurité déjà en place dans le plugin :
 ## Limitations connues
 
 - Les ~185 messages bas niveau du Parser (variante fr-CA du renderer) restent toujours en
-  français, même si `language=en` est envoyé — voir [docs/TRADUCTION.md](https://github.com/JonathanDesaulniers/webwork-renderer/blob/main/docs/TRADUCTION.md)
+  français, même si `language=en` est envoyé — voir [docs/TRADUCTION.md](https://github.com/JonathanDesaulniers2/webwork-renderer/blob/main/docs/TRADUCTION.md)
 - La traduction des fichiers macro individuels (au-delà du Parser/Value et de MathView) suit une
   politique **incrémentale** — seuls les messages réellement rencontrés en usage sont traduits au
   fil du temps, pas l'intégralité de la bibliothèque PG. Voir
-  [docs/TRADUCTION.md](https://github.com/JonathanDesaulniers/webwork-renderer/blob/main/docs/TRADUCTION.md#couverture-incrémentale-des-messages-macro-spécifiques)
+  [docs/TRADUCTION.md](https://github.com/JonathanDesaulniers2/webwork-renderer/blob/main/docs/TRADUCTION.md#couverture-incrémentale-des-messages-macro-spécifiques)
 - La fenêtre d'édition intégrée exige d'accepter le certificat auto-signé du renderer
   manuellement, une première fois, dans un onglet séparé (sans quoi elle reste vide silencieusement)
 - La navigation « banque locale » ne liste que le contenu déjà présent dans le dossier monté
