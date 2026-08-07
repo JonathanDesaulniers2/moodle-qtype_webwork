@@ -203,6 +203,84 @@ class webwork_client {
     }
 
     /**
+     * Écrit un fichier .pg dans la banque privée du renderer, via la route
+     * POST /render-api/can (contrôleur IO::writer).
+     *
+     * Le renderer valide LUI-MÊME le chemin de destination : il doit
+     * commencer par "private/", ne pas contenir "../", et se terminer par
+     * .pg ou .pl (voir le motif "privateOnlyPg" dans
+     * RenderApp/Controller/IO.pm). Cette validation côté serveur est notre
+     * garantie principale -- même un bogue de ce plugin ne pourrait pas
+     * faire écrire ailleurs. On valide quand même côté Moodle avant
+     * l'envoi, pour donner un message d'erreur utile plutôt qu'un rejet
+     * brut du serveur.
+     *
+     * Les dossiers intermédiaires manquants sont créés par le renderer.
+     *
+     * @param string $path chemin complet du fichier, commençant par "private/"
+     * @param string $contents contenu du fichier .pg
+     * @return string le chemin écrit, tel que confirmé par le renderer
+     */
+    public function write_problem(string $path, string $contents): string {
+        if (!preg_match('#^private/#', $path) || strpos($path, '../') !== false
+                || !preg_match('#\.p[gl]$#i', $path)) {
+            throw new \moodle_exception('uploadinvalidpath', 'qtype_webwork', '', s($path));
+        }
+
+        $url = $this->serverurl . '/render-api/can';
+        $response = $this->raw_post($url, [
+            'writeFilePath' => $path,
+            'problemSource' => $contents,
+        ]);
+        return trim($response);
+    }
+
+    /**
+     * Indique si un fichier existe déjà à ce chemin dans la banque privée.
+     *
+     * Utilise la route de lecture brute (/render-api/tap -> IO::raw) : un 404/erreur signifie
+     * que le fichier n'existe pas. Sert à prévenir l'écrasement silencieux
+     * lors d'un dépôt en lot.
+     */
+    public function problem_exists(string $path): bool {
+        try {
+            $this->raw_post($this->serverurl . '/render-api/tap', ['sourceFilePath' => $path]);
+            return true;
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * POST vers une route arbitraire du renderer, renvoyant la réponse
+     * BRUTE (texte). Les routes d'écriture ne répondent pas en JSON,
+     * contrairement à /render-api -- d'où cette variante de post().
+     */
+    protected function raw_post(string $url, array $params): string {
+        $curl = new \curl();
+        $curlopts = [
+            // Plus généreux que pour un rendu : l'écriture peut porter sur
+            // des dizaines de fichiers à la suite.
+            'CURLOPT_TIMEOUT' => 30,
+            'CURLOPT_CONNECTTIMEOUT' => 5,
+            'CURLOPT_HTTP_VERSION' => CURL_HTTP_VERSION_1_1,
+        ];
+        if ($this->selfsignedcert) {
+            $curlopts['CURLOPT_SSL_VERIFYPEER'] = false;
+            $curlopts['CURLOPT_SSL_VERIFYHOST'] = 0;
+        }
+        $curl->setopt($curlopts);
+        $response = $curl->post($url, $params);
+
+        $info = $curl->get_info();
+        if (!empty($curl->error) || empty($info['http_code']) || $info['http_code'] >= 400) {
+            throw new \moodle_exception('connectionerror', 'qtype_webwork', '',
+                $curl->error ?: ($info['http_code'] ?? '?'));
+        }
+        return (string) $response;
+    }
+
+    /**
      * Requête POST brute vers /render-api.
      */
     protected function post(array $params): array {

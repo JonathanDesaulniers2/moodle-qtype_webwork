@@ -98,16 +98,27 @@ dossiers montés dans le conteneur du renderer (voir [dépôt du renderer](https
 3. Pour créer un **nouveau** problème : bouton « Créer / éditer un problème » (ouvre l'éditeur
    natif du renderer). Le renderer refuse d'écrire sous `Library/` (contenu officiel, lecture
    seule) — utilisez toujours un chemin `private/...` pour du nouveau contenu.
-4. Réglez le mode de notation, les indices/solutions, la graine aléatoire, et l'**aide à la
-   saisie mathématique** (MathQuill, MathView, ou aucun éditeur — MathView par défaut). Ce
-   choix nécessite que le renderer ait bien le correctif `patch_renderproblem.pl` appliqué (voir
-   [docs/PATCHES.md](https://github.com/JonathanDesaulniers2/webwork-renderer/blob/main/docs/PATCHES.md))
-   pour que MathView fonctionne réellement — sans lui, MathQuill s'affiche toujours peu importe
-   ce choix.
-5. **Aide à la saisie des réponses** : MathView (par défaut), MathQuill, ou aucun éditeur assisté
-   — voir le [docs/PATCHES.md](https://github.com/JonathanDesaulniers2/webwork-renderer/blob/main/docs/PATCHES.md)
-   pour le détail des correctifs nécessaires côté serveur pour que ce choix fonctionne réellement
-6. Enregistrez — la question est prête à être ajoutée à un quiz
+4. Réglez les indices/solutions, la graine aléatoire, le nombre maximal de tentatives, et
+   l'**aide à la saisie mathématique** (MathView par défaut, MathQuill, ou aucun éditeur). Ce
+   dernier choix nécessite que le renderer ait bien le correctif `patch_renderproblem.pl`
+   appliqué (voir [docs/PATCHES.md](https://github.com/JonathanDesaulniers2/webwork-renderer/blob/main/docs/PATCHES.md))
+   — sans lui, MathQuill s'affiche toujours peu importe ce choix.
+5. Enregistrez — la question est prête à être ajoutée à un quiz
+
+### Mode de notation : déterminé par le test, pas par la question
+
+Le comportement d'une question WeBWorK découle du réglage **« Comportement des questions »** du
+test qui la contient, comme pour tous les autres types de question de Moodle :
+
+| Réglage du test | Comportement de la question |
+|---|---|
+| **Rétroaction à posteriori** | Mode différé : la réponse est enregistrée sans être corrigée avant la fin de la tentative |
+| **Tout autre** (interactif, adaptatif…) | Mode interactif : correction immédiate à chaque « Vérifier » |
+
+Les **indices et solutions** suivent en plus le réglage « Rétroaction générale » des options de
+relecture : s'il est masqué, ni indice ni solution ne s'affichent, quelles que soient les cases
+cochées sur la question. En mode interactif, un avertissement en rouge indique à l'étudiant
+combien de tentatives il lui reste avant que la question ne se verrouille.
 
 ## Informations de débogage (enseignants)
 
@@ -164,6 +175,35 @@ dossier après y avoir ajouté de nouveaux problèmes, sans créer de doublons.
 **Limites de sécurité** : maximum 2000 fichiers et 10 niveaux de profondeur par importation.
 Attention si vous importez depuis la racine de la bibliothèque libre — elle contient des dizaines
 de milliers de problèmes.
+
+## Déposer des fichiers .pg (administrateurs)
+
+*Administration du site → Plugins → Types de question → Déposer des problèmes WeBWorK (.pg)*
+
+Permet d'envoyer une **archive ZIP** de fichiers `.pg` directement dans la banque privée du
+renderer, en préservant l'arborescence des sous-dossiers. Un navigateur permet de choisir le
+dossier de destination sans le taper de mémoire ; les dossiers manquants sont créés
+automatiquement.
+
+⚠️ **Désactivé par défaut, et réservé aux administrateurs de site** — volontairement. Un fichier
+`.pg` n'est pas un document : c'est du **code Perl que le renderer exécute**. Y donner accès
+équivaut à accorder une capacité d'exécution de code sur le serveur renderer. Un administrateur
+de site dispose déjà de cette capacité par d'autres voies (installation de plugins…), ce qui
+n'élargit pas la surface d'attaque — ce ne serait pas le cas pour un enseignant.
+
+Pour l'activer : cochez « Autoriser le dépôt de fichiers .pg » dans les réglages du plugin.
+
+Protections en place :
+- le renderer valide lui-même la destination côté serveur (obligatoirement sous `private/`, sans
+  `../`, extension `.pg`/`.pl` uniquement) — même un bogue de ce plugin ne pourrait pas écrire
+  ailleurs ;
+- les fichiers déjà présents sont ignorés et signalés, sauf si vous cochez explicitement
+  « Écraser les fichiers existants » ;
+- tout ce qui n'est pas un `.pg`/`.pl` (images, `__MACOSX/`, etc.) est ignoré.
+
+**À ne pas confondre avec l'importation** : le dépôt envoie des *fichiers* sur le renderer ;
+l'importation crée des *questions Moodle* à partir de fichiers déjà présents sur le renderer. Les
+deux s'enchaînent : déposer, puis importer.
 
 ## Sécurité — ce qu'il faut absolument savoir
 

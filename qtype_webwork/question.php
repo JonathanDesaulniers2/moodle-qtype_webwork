@@ -67,9 +67,40 @@ class qtype_webwork_question extends question_graded_automatically {
      * Moodle n'offre pas du tout (il n'a aucune notion de bouton "Vérifier"
      * intermédiaire). Voir qbehaviour_webwork::process_submit() pour le
      * détail du traitement différent selon $this->question->gradingmode.
+     *
+     * En revanche, le MODE de notation (différé ou interactif) est déduit
+     * du réglage du test, et non plus configuré par question : c'est
+     * l'enseignant qui décide au niveau du test, comme pour tous les autres
+     * types de question de Moodle. Voir resolve_gradingmode().
      */
     public function make_behaviour(question_attempt $qa, $preferredbehaviour) {
+        // Mémorisé sur la question : le rendu et start_attempt() en ont
+        // besoin, et cette méthode est le seul endroit où Moodle nous
+        // transmet le comportement choisi au niveau du test.
+        $this->gradingmode = self::resolve_gradingmode($preferredbehaviour);
         return question_engine::make_behaviour('webwork', $qa, $preferredbehaviour);
+    }
+
+    /**
+     * Traduit le comportement choisi au niveau du test en mode de notation
+     * WeBWorK.
+     *
+     * Seul "deferredfeedback" (« Rétroaction à posteriori ») donne le mode
+     * différé : la réponse est enregistrée sans être corrigée avant la fin
+     * de la tentative. TOUT le reste -- interactif, adaptatif, notation
+     * manuelle, CBM, etc. -- donne le mode interactif, où l'étudiant reçoit
+     * une correction immédiate à chaque « Vérifier ».
+     *
+     * Ce choix par défaut vers l'interactif est volontaire : un enseignant
+     * qui choisit un comportement autre que « à posteriori » veut de la
+     * rétroaction pendant la tentative, ce qui est précisément ce que le
+     * mode interactif fournit.
+     *
+     * @param string|null $preferredbehaviour le comportement réglé sur le test
+     * @return string 'deferred' ou 'interactive'
+     */
+    public static function resolve_gradingmode($preferredbehaviour): string {
+        return ($preferredbehaviour === 'deferredfeedback') ? 'deferred' : 'interactive';
     }
 
     /** @var array|null cache mémoire du dernier rendu (html, fieldnames, css, js) */
@@ -186,6 +217,13 @@ class qtype_webwork_question extends question_graded_automatically {
         // On fige le seed choisi (utile surtout en mode peruser, pour rester
         // cohérent même si la fonction de dérivation change plus tard).
         $step->set_qt_var('_seed', $this->effective_seed());
+
+        // On fige aussi le mode de notation déduit du comportement du test,
+        // pour deux raisons : il doit rester stable pour toute la durée de
+        // la tentative même si l'enseignant change le réglage du test
+        // entre-temps, et make_behaviour() n'est pas rappelé à chaque
+        // requête (le rendu doit pouvoir le relire).
+        $step->set_qt_var('_gradingmode', $this->gradingmode ?: 'interactive');
     }
 
     public function apply_attempt_state(question_attempt_step $step) {
@@ -193,6 +231,10 @@ class qtype_webwork_question extends question_graded_automatically {
         if ($seed !== null) {
             $this->seedmode = 'fixed';
             $this->problemseed = (int) $seed;
+        }
+        $mode = $step->get_qt_var('_gradingmode');
+        if ($mode !== null && in_array($mode, ['deferred', 'interactive'], true)) {
+            $this->gradingmode = $mode;
         }
     }
 

@@ -135,16 +135,16 @@ if ($data) {
 
     $defaults = [
         'entryassist' => $data->entryassist,
-        'gradingmode' => $data->gradingmode,
+        'gradingmode' => 'interactive',
         'seedmode' => $data->seedmode,
         'problemseed' => 1,
         'showcorrectness' => 1,
         'showhints' => (int) $data->showhints,
-        'showhintsafter' => 1,
+        'showhintsafter' => 2,
         'showsolutions' => (int) $data->showsolutions,
-        'showsolutionsafter' => 1,
+        'showsolutionsafter' => 5,
         'showsolutionsaftertest' => 0,
-        'maxtries' => 0,
+        'maxtries' => 5,
     ];
 
     $path = trim((string) $data->path, '/');

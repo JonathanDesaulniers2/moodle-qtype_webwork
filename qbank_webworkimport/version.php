@@ -10,5 +10,5 @@ $plugin->release   = '1.0';
 // Ce plugin n'est qu'un point d'entrée : toute la logique d'importation
 // vit dans qtype_webwork, sans lequel il n'a aucune raison d'être.
 $plugin->dependencies = [
-    'qtype_webwork' => 2026072836,
+    'qtype_webwork' => 2026072841,
 ];

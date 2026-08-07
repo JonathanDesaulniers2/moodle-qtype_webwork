@@ -55,20 +55,25 @@ class qtype_webwork_edit_form extends question_edit_form {
         $mform->setDefault('problemseed', 1);
         $mform->hideIf('problemseed', 'seedmode', 'neq', 'fixed');
 
-        $mform->addElement('select', 'gradingmode', get_string('gradingmode', 'qtype_webwork'), [
-            'deferred'    => get_string('gradingmodedeferred', 'qtype_webwork'),
-            'interactive' => get_string('gradingmodeinteractive', 'qtype_webwork'),
-        ]);
-        $mform->setDefault('gradingmode', 'deferred');
-        $mform->addHelpButton('gradingmode', 'gradingmode', 'qtype_webwork');
+        // Le mode de notation (différé/interactif) N'EST PLUS configuré par
+        // question : il est déduit du comportement choisi au niveau du TEST
+        // (« Rétroaction à posteriori » → différé, tout le reste →
+        // interactif). Voir qtype_webwork_question::resolve_gradingmode().
+        // Le champ reste présent en base de données (colonne 'gradingmode'),
+        // simplement ignoré, pour ne pas casser les questions existantes ni
+        // les sauvegardes/restaurations d'anciennes versions.
+        $mform->addElement('static', 'gradingmodeinfo',
+            get_string('gradingmode', 'qtype_webwork'),
+            get_string('gradingmodefromquiz', 'qtype_webwork'));
+        $mform->addElement('hidden', 'gradingmode', 'interactive');
+        $mform->setType('gradingmode', PARAM_ALPHA);
 
         // Pénalité par essai incorrect, pertinente uniquement en mode
         // interactif (ce champ correspond à la colonne standard
         // 'penalty' de la table Moodle 'question').
         $mform->addElement('text', 'penalty', get_string('penalty', 'qtype_webwork'), ['size' => 5]);
         $mform->setType('penalty', PARAM_FLOAT);
-        $mform->setDefault('penalty', 0.3333333);
-        $mform->hideIf('penalty', 'gradingmode', 'eq', 'deferred');
+        $mform->setDefault('penalty', 0);
 
         // showcorrectness/showhints/showsolutions s'appliquent aux DEUX
         // modes de notation désormais : en différé, "showcorrectness"
@@ -89,15 +94,15 @@ class qtype_webwork_edit_form extends question_edit_form {
         $mform->addHelpButton('entryassist', 'entryassist', 'qtype_webwork');
 
         $mform->addElement('advcheckbox', 'showhints', get_string('showhints', 'qtype_webwork'));
-        $mform->setDefault('showhints', 0);
+        $mform->setDefault('showhints', 1);
 
         $mform->addElement('text', 'showhintsafter', get_string('showhintsafter', 'qtype_webwork'), ['size' => 4]);
         $mform->setType('showhintsafter', PARAM_INT);
-        $mform->setDefault('showhintsafter', 1);
+        $mform->setDefault('showhintsafter', 2);
         $mform->hideIf('showhintsafter', 'showhints', 'notchecked');
 
         $mform->addElement('advcheckbox', 'showsolutions', get_string('showsolutions', 'qtype_webwork'));
-        $mform->setDefault('showsolutions', 0);
+        $mform->setDefault('showsolutions', 1);
 
         // "Après N tentatives" n'a de sens qu'en mode interactif -- en mode
         // différé, les solutions ne sont de toute façon jamais montrées
@@ -105,8 +110,7 @@ class qtype_webwork_edit_form extends question_edit_form {
         // réglage-là serait sans effet.
         $mform->addElement('text', 'showsolutionsafter', get_string('showsolutionsafter', 'qtype_webwork'), ['size' => 4]);
         $mform->setType('showsolutionsafter', PARAM_INT);
-        $mform->setDefault('showsolutionsafter', 1);
-        $mform->hideIf('showsolutionsafter', 'gradingmode', 'eq', 'deferred');
+        $mform->setDefault('showsolutionsafter', 5);
         $mform->hideIf('showsolutionsafter', 'showsolutions', 'notchecked');
 
         // En mode différé, ce réglage est implicite (les solutions
@@ -114,14 +118,12 @@ class qtype_webwork_edit_form extends question_edit_form {
         // masqué pour ce mode afin d'éviter la confusion.
         $mform->addElement('advcheckbox', 'showsolutionsaftertest', get_string('showsolutionsaftertest', 'qtype_webwork'));
         $mform->setDefault('showsolutionsaftertest', 0);
-        $mform->hideIf('showsolutionsaftertest', 'gradingmode', 'eq', 'deferred');
         $mform->hideIf('showsolutionsaftertest', 'showsolutions', 'notchecked');
 
         $mform->addElement('text', 'maxtries', get_string('maxtries', 'qtype_webwork'), ['size' => 4]);
         $mform->setType('maxtries', PARAM_INT);
-        $mform->setDefault('maxtries', 0);
+        $mform->setDefault('maxtries', 5);
         $mform->addHelpButton('maxtries', 'maxtries', 'qtype_webwork');
-        $mform->hideIf('maxtries', 'gradingmode', 'eq', 'deferred');
     }
 
     public function qtype() {

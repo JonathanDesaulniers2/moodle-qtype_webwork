@@ -212,12 +212,35 @@ JS;
             }
         }
 
+        // Le mode de notation est déduit du comportement réglé au niveau du
+        // TEST, pas configuré par question. On le resynchronise ici parce
+        // que make_behaviour() n'est pas systématiquement appelé avant le
+        // rendu (notamment en prévisualisation de question).
+        //
+        // question_attempt n'expose pas directement le comportement
+        // "préféré" choisi sur le test ; on relit donc celui que
+        // make_behaviour() a mémorisé sur la question, avec repli sur le
+        // mode interactif (le défaut voulu pour tout comportement autre que
+        // « à posteriori »).
+        if (empty($question->gradingmode)
+                || !in_array($question->gradingmode, ['deferred', 'interactive'], true)) {
+            $question->gradingmode = 'interactive';
+        }
+
+        // Les indices et solutions constituent de la rétroaction : ils
+        // suivent donc le réglage "Rétroaction générale" du test, en plus de
+        // leur propre case à cocher dans la question. Si l'enseignant a
+        // masqué la rétroaction générale (typiquement : test à posteriori
+        // sans rétroaction pendant la tentative), rien de tout cela ne
+        // s'affiche, quelles que soient les cases cochées sur la question.
+        $feedbackallowed = $options->generalfeedback != question_display_options::HIDDEN;
+
         // Indices : basés sur le nombre de tentatives, dans les deux modes
         // (voir question.php::tries_so_far() -- compte les étapes réellement
         // soumises, y compris en mode différé où notre comportement
         // personnalisé enregistre chaque "Vérifier" sans les noter).
         $tries = $question->tries_so_far($qa);
-        $showhintsnow = $question->showhints && ($tries >= $question->showhintsafter);
+        $showhintsnow = $feedbackallowed && $question->showhints && ($tries >= $question->showhintsafter);
 
         // Solutions : en mode différé, uniquement une fois le test terminé
         // (jamais avant, peu importe le nombre de tentatives) -- les
@@ -225,9 +248,10 @@ JS;
         // mode interactif n'ont pas leur place ici. En mode interactif, le
         // comportement existant (basé sur les tentatives) s'applique.
         if ($question->gradingmode === 'deferred') {
-            $showsolutionsnow = $question->showsolutions && $qa->get_state()->is_finished();
+            $showsolutionsnow = $feedbackallowed && $question->showsolutions
+                && $qa->get_state()->is_finished();
         } else {
-            $showsolutionsnow = $question->showsolutions && (
+            $showsolutionsnow = $feedbackallowed && $question->showsolutions && (
                 ($tries >= $question->showsolutionsafter)
                 || ($question->showsolutionsaftertest && $qa->get_state()->is_finished())
             );
@@ -344,6 +368,7 @@ JS;
             $output .= html_writer::empty_tag('link', ['rel' => 'stylesheet', 'href' => $url]);
         }
 
+        $output .= $this->render_tries_warning($qa, $question, $tries, $feedbackallowed);
         $output .= html_writer::tag('div', $html, ['class' => 'webwork-problem']);
 
         // Leurre pour "window.frameElement" : le script "problem.js" du
@@ -537,6 +562,59 @@ JS;
         }
 
         return $output;
+    }
+
+    /**
+     * Avertissement en rouge indiquant combien de tentatives il reste avant
+     * que la question ne se verrouille.
+     *
+     * Uniquement en mode interactif : en mode différé, l'étudiant peut
+     * cliquer « Vérifier » autant de fois qu'il veut sans conséquence (rien
+     * n'est noté avant la fin du test), la notion de tentative restante n'a
+     * donc pas de sens.
+     *
+     * La limite effective est le PLUS PETIT de deux réglages, parce que
+     * l'un comme l'autre verrouille la question (voir
+     * qbehaviour_webwork::process_submit) : le nombre maximal de tentatives,
+     * et le nombre de tentatives après lequel la solution est révélée.
+     *
+     * Masqué si la rétroaction générale l'est aussi : dans ce cas
+     * l'étudiant ne verra de toute façon ni solution ni correction, et
+     * annoncer un décompte n'apporterait rien.
+     */
+    protected function render_tries_warning(question_attempt $qa, $question,
+            int $tries, bool $feedbackallowed): string {
+        if ($question->gradingmode !== 'interactive' || !$feedbackallowed) {
+            return '';
+        }
+        if ($qa->get_state()->is_finished()) {
+            return '';
+        }
+
+        $limits = [];
+        if (!empty($question->maxtries)) {
+            $limits[] = (int) $question->maxtries;
+        }
+        if (!empty($question->showsolutions) && !empty($question->showsolutionsafter)) {
+            $limits[] = (int) $question->showsolutionsafter;
+        }
+        if (empty($limits)) {
+            return '';
+        }
+
+        $remaining = min($limits) - $tries;
+        if ($remaining <= 0) {
+            return '';
+        }
+
+        $message = ($remaining === 1)
+            ? get_string('triesremainingone', 'qtype_webwork')
+            : get_string('triesremaining', 'qtype_webwork', $remaining);
+
+        return html_writer::tag('div', $message, [
+            'class' => 'qtype-webwork-tries alert alert-danger py-2 my-2',
+            'role' => 'status',
+        ]);
     }
 
     /**

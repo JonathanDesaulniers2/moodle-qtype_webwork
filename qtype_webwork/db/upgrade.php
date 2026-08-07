@@ -486,4 +486,78 @@ function xmldb_qtype_webwork_upgrade($oldversion) {
         // catégorie n'est explicitement fournie.
         upgrade_plugin_savepoint(true, 2026072836, 'qtype', 'webwork');
     }
+
+    if ($oldversion < 2026072837) {
+        // Pas de changement de schéma -- le mode de notation
+        // (différé/interactif) n'est PLUS configuré par question : il est
+        // désormais déduit du comportement choisi au niveau du TEST
+        // (« Rétroaction à posteriori » -> différé, tout le reste ->
+        // interactif). La colonne 'gradingmode' est CONSERVÉE en base mais
+        // ignorée, pour ne pas casser les questions existantes ni les
+        // restaurations d'anciennes sauvegardes.
+        //
+        // Les indices et solutions suivent en plus le réglage « Rétroaction
+        // générale » des options de relecture du test : si l'enseignant l'a
+        // masquée, ni indice ni solution ne s'affichent, quelles que soient
+        // les cases cochées sur la question.
+        //
+        // Ajoute enfin un avertissement en rouge (« Il vous reste XX
+        // tentatives ») au-dessus de la question, en mode interactif
+        // seulement, calculé sur le plus petit des deux réglages qui
+        // verrouillent la question (nombre maximal de tentatives, et
+        // nombre de tentatives avant révélation de la solution).
+        upgrade_plugin_savepoint(true, 2026072837, 'qtype', 'webwork');
+    }
+
+    if ($oldversion < 2026072838) {
+        // Correctif du précédent : le rendu appelait
+        // question_attempt::get_preferred_behaviour(), méthode qui n'existe
+        // pas -- toute page de test contenant une question WeBWorK
+        // plantait. Le mode déduit du comportement du test est désormais
+        // FIGÉ dans l'état de la tentative (variable '_gradingmode', même
+        // mécanisme que pour la graine), ce qui le rend lisible à chaque
+        // requête sans dépendre d'un appel à make_behaviour(), et le garde
+        // stable pour toute la durée de la tentative même si l'enseignant
+        // change le réglage du test entre-temps.
+        upgrade_plugin_savepoint(true, 2026072838, 'qtype', 'webwork');
+    }
+
+    if ($oldversion < 2026072839) {
+        // Pas de changement de schéma -- nouvelles valeurs par défaut du
+        // formulaire de question (et de l'importation en lot, pour rester
+        // cohérent) : pénalité 0, indices affichés après 2 tentatives,
+        // solutions après 5, maximum 5 tentatives. Graine aléatoire et
+        // MathView restent les défauts. N'affecte QUE les nouvelles
+        // questions : les questions existantes conservent leurs réglages.
+        // Le champ « mode de notation » disparaît aussi du formulaire
+        // d'importation (déterminé par le test depuis 2026072837).
+        upgrade_plugin_savepoint(true, 2026072839, 'qtype', 'webwork');
+    }
+
+    if ($oldversion < 2026072840) {
+        // Pas de changement de schéma -- ajoute le dépôt de fichiers .pg
+        // par archive ZIP (upload.php), RÉSERVÉ AUX ADMINISTRATEURS DE
+        // SITE et DÉSACTIVÉ PAR DÉFAUT (réglage qtype_webwork/allowupload).
+        //
+        // Un .pg est du code Perl exécuté par le renderer : y donner accès
+        // équivaut à accorder une capacité d'exécution de code sur ce
+        // serveur. Un administrateur de site dispose déjà de cette
+        // capacité par d'autres voies, ce qui n'élargit pas la surface
+        // d'attaque -- ce ne serait PAS le cas pour un enseignant, d'où la
+        // restriction à moodle/site:config.
+        //
+        // L'écriture passe par la route native POST /render-api/can du
+        // renderer, qui valide LUI-MÊME la destination côté serveur
+        // (obligatoirement sous private/, sans "../", extension .pg/.pl).
+        upgrade_plugin_savepoint(true, 2026072840, 'qtype', 'webwork');
+    }
+
+    if ($oldversion < 2026072841) {
+        // Pas de changement de schéma -- ajoute un navigateur
+        // d'arborescence au champ "Dossier de destination" de la page de
+        // dépôt, pour ne plus avoir à taper le chemin de mémoire. Propose
+        // aussi la racine de private/ comme destination, cas qu'un simple
+        // parcours des sous-dossiers ne permettrait pas de choisir.
+        upgrade_plugin_savepoint(true, 2026072841, 'qtype', 'webwork');
+    }
 }

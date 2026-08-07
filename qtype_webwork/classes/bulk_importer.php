@@ -201,7 +201,7 @@ class bulk_importer {
             $question->generalfeedback = '';
             $question->generalfeedbackformat = FORMAT_HTML;
             $question->defaultmark = 1;
-            $question->penalty = 0.3333333;
+            $question->penalty = 0;
             $question->length = 1;
             $question->stamp = make_unique_id_code();
             $question->idnumber = null;

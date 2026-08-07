@@ -1,5 +1,25 @@
 # Journal des modifications
 
+## qtype_webwork 2026072837-2026072841
+
+- **Mode de notation déduit du test** — le champ « mode de notation » disparaît du formulaire de
+  question : « Rétroaction à posteriori » donne le mode différé, tout autre comportement donne
+  l'interactif. Le mode est figé dans l'état de la tentative, donc stable même si l'enseignant
+  change le réglage du test en cours de route. La colonne `gradingmode` est conservée en base
+  mais ignorée (réversible, et n'invalide pas les anciennes sauvegardes).
+- **Indices et solutions liés à la rétroaction générale** — masqués si l'enseignant a masqué la
+  rétroaction générale dans les options de relecture, quelles que soient les cases cochées sur
+  la question.
+- **Avertissement « Il vous reste XX tentatives »** — en rouge au-dessus de la question, en mode
+  interactif seulement, calculé sur le plus petit des deux verrous (tentatives maximales, ou
+  nombre d'essais avant révélation de la solution).
+- **Nouvelles valeurs par défaut** — pénalité 0, indices après 2 tentatives (cochés), solutions
+  après 5 (cochées), maximum 5 tentatives. N'affecte que les nouvelles questions.
+- **Dépôt de fichiers .pg par archive ZIP** (administrateurs de site uniquement, désactivé par
+  défaut) — envoie des `.pg` dans la banque privée du renderer en préservant l'arborescence,
+  avec navigateur de dossiers, détection des doublons, et validation stricte des chemins côté
+  serveur. Voir le README pour la justification du niveau d'accès retenu.
+
 ## qtype_webwork 2026072836 + qbank_webworkimport 1.0 (onglet d'importation)
 
 Nouveau plugin compagnon **`qbank_webworkimport`** : ajoute l'onglet « Importer WeBWorK » à la

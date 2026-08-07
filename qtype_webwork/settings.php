@@ -1,6 +1,18 @@
 <?php
 defined('MOODLE_INTERNAL') || die();
 
+// Page de dépôt de fichiers .pg, RÉSERVÉE AUX ADMINISTRATEURS DE SITE.
+// Déclarée en dehors de $ADMIN->fulltree pour que l'entrée de menu existe
+// dès la construction de l'arbre d'administration. La capacité exigée
+// (moodle/site:config) est volontairement la plus restrictive : un .pg est
+// du code Perl exécuté par le renderer -- voir l'en-tête de upload.php.
+$ADMIN->add('qtypesettings', new admin_externalpage(
+    'qtypewebworkupload',
+    get_string('uploadtitle', 'qtype_webwork'),
+    new moodle_url('/question/type/webwork/upload.php'),
+    'moodle/site:config'
+));
+
 if ($ADMIN->fulltree) {
     // Rappel visible en tête des réglages : l'importation en lot se lance
     // depuis une banque de questions (elle a besoin d'une catégorie de
@@ -9,6 +21,13 @@ if ($ADMIN->fulltree) {
         'qtype_webwork/importhint',
         get_string('importtitle', 'qtype_webwork'),
         get_string('importadminhint', 'qtype_webwork')
+    ));
+
+    $settings->add(new admin_setting_configcheckbox(
+        'qtype_webwork/allowupload',
+        get_string('allowupload', 'qtype_webwork'),
+        get_string('allowupload_help', 'qtype_webwork'),
+        0
     ));
 
     $settings->add(new admin_setting_configtext(

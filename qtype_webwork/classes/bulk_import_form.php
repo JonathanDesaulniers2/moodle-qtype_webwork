@@ -61,13 +61,6 @@ class bulk_import_form extends \moodleform {
             ]);
         $mform->setDefault('entryassist', 'MathView');
 
-        $mform->addElement('select', 'gradingmode',
-            get_string('gradingmode', 'qtype_webwork'), [
-                'deferred' => get_string('gradingmodedeferred', 'qtype_webwork'),
-                'interactive' => get_string('gradingmodeinteractive', 'qtype_webwork'),
-            ]);
-        $mform->setDefault('gradingmode', 'deferred');
-
         $mform->addElement('select', 'seedmode',
             get_string('problemseedmode', 'qtype_webwork'), [
                 'random' => get_string('problemseedrandom', 'qtype_webwork'),
@@ -78,11 +71,11 @@ class bulk_import_form extends \moodleform {
 
         $mform->addElement('advcheckbox', 'showhints',
             get_string('showhints', 'qtype_webwork'), '', [], [0, 1]);
-        $mform->setDefault('showhints', 0);
+        $mform->setDefault('showhints', 1);
 
         $mform->addElement('advcheckbox', 'showsolutions',
             get_string('showsolutions', 'qtype_webwork'), '', [], [0, 1]);
-        $mform->setDefault('showsolutions', 0);
+        $mform->setDefault('showsolutions', 1);
 
         $this->add_action_buttons(true, get_string('importpreview', 'qtype_webwork'));
     }
