@@ -560,4 +560,40 @@ function xmldb_qtype_webwork_upgrade($oldversion) {
         // parcours des sous-dossiers ne permettrait pas de choisir.
         upgrade_plugin_savepoint(true, 2026072841, 'qtype', 'webwork');
     }
+
+    if ($oldversion < 2026072842) {
+        // Pas de changement de schéma -- CORRECTIF DE FUITE D'INFORMATION :
+        // en mode différé, l'icône de rétroaction était bien neutralisée
+        // (grise), mais le TITRE de la bulle de prévisualisation affichait
+        // toujours "Correct"/"Erroné", révélant la correction à
+        // l'étudiant avant la fin de la tentative.
+        //
+        // Le traitement précédent ne remplaçait que les chaînes exactes
+        // ">Correct<" et ">Incorrect<" : il ne couvrait ni les libellés
+        // traduits (le renderer francisé renvoie "Erroné"), ni les
+        // variantes de balisage. Le titre entier est désormais remplacé par
+        // un libellé neutre, sur tous les attributs concernés
+        // (data-bs-title, title, aria-label).
+        upgrade_plugin_savepoint(true, 2026072842, 'qtype', 'webwork');
+    }
+
+    if ($oldversion < 2026072843) {
+        // Pas de changement de schéma -- corrige la logique du message
+        // « Il vous reste XX tentatives » et du verrouillage associé.
+        //
+        // Le message était masqué avec la rétroaction générale, alors que le
+        // nombre maximal de tentatives est une contrainte MÉCANIQUE : la
+        // question se bloquait quand même, sans que l'étudiant ait été
+        // prévenu. Le message s'affiche désormais dès qu'un maxtries est
+        // configuré, indépendamment de la rétroaction.
+        //
+        // Symétriquement, le verrouillage « solution atteinte » ne
+        // s'applique plus que si la solution sera réellement montrée
+        // (rétroaction générale visible pendant la tentative) : sinon
+        // l'étudiant se retrouvait bloqué sur un seuil de révélation d'une
+        // solution qu'il ne verrait jamais. Le décompte affiché suit la même
+        // règle : plus petite des deux limites si la rétroaction est
+        // visible, maxtries seul sinon.
+        upgrade_plugin_savepoint(true, 2026072843, 'qtype', 'webwork');
+    }
 }

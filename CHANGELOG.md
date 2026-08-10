@@ -1,5 +1,23 @@
 # Journal des modifications
 
+## qtype_webwork 2026072842-2026072843 + qbehaviour_webwork 2026072842
+
+- **Correctif de fuite d'information (mode différé)** — l'icône de rétroaction était bien
+  neutralisée, mais le TITRE de la bulle de prévisualisation affichait toujours
+  « Correct »/« Erroné », révélant la correction avant la fin de la tentative. Le traitement
+  précédent ne remplaçait que les libellés anglais exacts, sans couvrir les traductions du
+  renderer francisé. Le titre entier est désormais remplacé par un libellé neutre, sur tous les
+  attributs concernés (`data-bs-title`, `title`, `aria-label`).
+- **Message de tentatives restantes : logique corrigée** — le message était masqué en même temps
+  que la rétroaction générale, alors que le nombre maximal de tentatives est une contrainte
+  mécanique : la question se bloquait quand même, sans avertissement. Il s'affiche maintenant dès
+  qu'un `maxtries` est configuré, quelle que soit la visibilité de la rétroaction.
+- **Verrouillage « solution atteinte » corrigé** (qbehaviour_webwork) — le comportement bloquait
+  la question au seuil `showsolutionsafter` même quand la rétroaction générale était masquée,
+  donc même quand la solution ne serait jamais montrée : l'étudiant se retrouvait bloqué sans
+  explication. Ce verrou ne s'applique désormais que si la solution sera réellement affichée,
+  ce qui rend le décompte annoncé et le blocage effectif cohérents.
+
 ## qtype_webwork 2026072837-2026072841
 
 - **Mode de notation déduit du test** — le champ « mode de notation » disparaît du formulaire de

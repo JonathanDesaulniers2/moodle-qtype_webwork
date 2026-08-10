@@ -613,15 +613,26 @@ class response_parser {
             }
 
             if ($node->getAttribute('aria-label') !== '') {
-                $node->setAttribute('aria-label', 'Aperçu');
+                $node->setAttribute('aria-label', get_string('previewtitle', 'qtype_webwork'));
             }
 
-            // Le titre de la bulle contient "Correct"/"Incorrect" en texte
-            // (dans data-bs-title, HTML imbriqué) -- neutralisé lui aussi.
-            $title = $node->getAttribute('data-bs-title');
-            if ($title !== '') {
-                $title = str_replace(['>Correct<', '>Incorrect<'], '>Aperçu<', $title);
-                $node->setAttribute('data-bs-title', $title);
+            // Le titre de la bulle annonce la correction en toutes lettres
+            // ("Correct", "Incorrect", et leurs traductions "Correct",
+            // "Erroné"...). Le simple remplacement de ">Correct<" ne suffit
+            // pas : le libellé varie selon la langue du renderer, et n'est
+            // pas toujours entouré des mêmes balises. On remplace donc le
+            // titre ENTIER par un libellé neutre -- c'est le seul moyen sûr
+            // de ne rien laisser filtrer.
+            //
+            // Important : ce titre est la seule information de correction
+            // dans la bulle ; son contenu (data-bs-content) ne montre que
+            // la réponse saisie et son rendu, jamais la correction.
+            if ($node->getAttribute('data-bs-title') !== '') {
+                $node->setAttribute('data-bs-title', get_string('previewtitle', 'qtype_webwork'));
+            }
+            // Certaines versions utilisent l'attribut "title" classique.
+            if ($node->getAttribute('title') !== '') {
+                $node->setAttribute('title', get_string('previewtitle', 'qtype_webwork'));
             }
         }
 

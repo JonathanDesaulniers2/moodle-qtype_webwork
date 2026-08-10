@@ -144,8 +144,23 @@ class qbehaviour_webwork extends question_behaviour_with_save {
 
         $triessofar = $this->question->tries_so_far($this->qa) + 1; // +1 : cette tentative-ci n'est pas encore dans l'historique.
         $maxreached = !empty($this->question->maxtries) && $triessofar >= $this->question->maxtries;
+
+        // Le verrouillage "solution atteinte" ne s'applique QUE si la
+        // solution sera réellement montrée à cet étudiant : les indices et
+        // solutions suivent le réglage « Rétroaction générale » des options
+        // de relecture du test (voir renderer.php). Si l'enseignant l'a
+        // masquée, verrouiller ici bloquerait l'étudiant sans rien lui
+        // révéler ni l'avoir prévenu -- seul maxtries doit alors compter.
+        //
+        // Le comportement n'a pas accès aux options d'affichage (elles
+        // relèvent du rendu, pas du traitement d'une soumission) : on relit
+        // donc le réglage du test directement. En cas de doute (hors
+        // contexte de test -- prévisualisation, tests unitaires), on
+        // considère la rétroaction comme visible, ce qui préserve le
+        // comportement historique.
         $solutionshown = !empty($this->question->showsolutions)
-            && $triessofar >= $this->question->showsolutionsafter;
+            && $triessofar >= $this->question->showsolutionsafter
+            && self::general_feedback_visible_during_attempt($this->qa);
         if ($fullycorrect || $maxreached || $solutionshown) {
             $pendingstep->set_state($fullycorrect ? question_state::$gradedright : $state);
         } else {
@@ -181,5 +196,50 @@ class qbehaviour_webwork extends question_behaviour_with_save {
         $pendingstep->set_new_response_summary($this->question->summarise_response($response));
 
         return question_attempt::KEEP;
+    }
+
+    /**
+     * Indique si la rétroaction générale est visible PENDANT la tentative,
+     * selon les options de relecture du test auquel appartient cette
+     * question.
+     *
+     * Sert à décider si le verrouillage « solution atteinte » doit
+     * s'appliquer : inutile (et trompeur pour l'étudiant) de bloquer une
+     * question sur un seuil de révélation de solution si cette solution ne
+     * lui sera jamais montrée.
+     *
+     * Renvoie true en cas de doute -- notamment hors contexte de test
+     * (prévisualisation de question, tests unitaires), où aucune option de
+     * relecture n'existe. C'est le choix conservateur : il préserve le
+     * comportement historique là où la question n'est pas posée.
+     */
+    protected static function general_feedback_visible_during_attempt(question_attempt $qa): bool {
+        global $DB;
+
+        $usage = $qa->get_usage_id();
+        if (empty($usage)) {
+            return true;
+        }
+
+        // Retrouve le test auquel cette tentative appartient. Une question
+        // peut être utilisée hors quiz (prévisualisation, autre activité) :
+        // dans ce cas on ne restreint rien.
+        $attempt = $DB->get_record('quiz_attempts', ['uniqueid' => $usage], 'quiz', IGNORE_MISSING);
+        if (!$attempt) {
+            return true;
+        }
+        $quiz = $DB->get_record('quiz', ['id' => $attempt->quiz], 'reviewgeneralfeedback', IGNORE_MISSING);
+        if (!$quiz) {
+            return true;
+        }
+
+        // Les options de relecture de Moodle sont un champ de bits ; le bloc
+        // « pendant la tentative » correspond au masque DURING défini par
+        // mod_quiz\question\display_options.
+        $during = defined('\mod_quiz\question\display_options::DURING')
+            ? \mod_quiz\question\display_options::DURING
+            : 0x10000;
+
+        return (bool) ($quiz->reviewgeneralfeedback & $during);
     }
 }

@@ -129,3 +129,4 @@ $string['uploadreadfail'] = 'Fichier illisible dans l\'archive.';
 $string['uploadinvalidpath'] = 'Chemin de destination refusé : {$a}';
 $string['uploadrootfolder'] = 'Racine de private/ (dépôt direct)';
 $string['uploadnosubfolder'] = 'Aucun sous-dossier ici — vous pouvez quand même taper un nouveau nom dans le champ pour le créer.';
+$string['previewtitle'] = 'Aperçu de votre réponse';

@@ -573,18 +573,23 @@ JS;
      * n'est noté avant la fin du test), la notion de tentative restante n'a
      * donc pas de sens.
      *
-     * La limite effective est le PLUS PETIT de deux réglages, parce que
-     * l'un comme l'autre verrouille la question (voir
-     * qbehaviour_webwork::process_submit) : le nombre maximal de tentatives,
-     * et le nombre de tentatives après lequel la solution est révélée.
+     * Le décompte porte sur ce qui VERROUILLE RÉELLEMENT la question pour
+     * cet étudiant (voir qbehaviour_webwork::process_submit) :
      *
-     * Masqué si la rétroaction générale l'est aussi : dans ce cas
-     * l'étudiant ne verra de toute façon ni solution ni correction, et
-     * annoncer un décompte n'apporterait rien.
+     * - le nombre maximal de tentatives verrouille toujours, quelle que
+     *   soit la visibilité de la rétroaction -- c'est une contrainte
+     *   mécanique, et l'étudiant doit être averti avant de se retrouver
+     *   bloqué sans explication ;
+     * - le nombre de tentatives avant révélation de la solution ne compte
+     *   QUE si la rétroaction générale est visible : sinon la solution ne
+     *   sera de toute façon jamais montrée, et décompter dessus
+     *   annoncerait un blocage qui n'aura pas lieu.
+     *
+     * Quand les deux s'appliquent, c'est la plus petite valeur qui gouverne.
      */
     protected function render_tries_warning(question_attempt $qa, $question,
             int $tries, bool $feedbackallowed): string {
-        if ($question->gradingmode !== 'interactive' || !$feedbackallowed) {
+        if ($question->gradingmode !== 'interactive') {
             return '';
         }
         if ($qa->get_state()->is_finished()) {
@@ -595,7 +600,8 @@ JS;
         if (!empty($question->maxtries)) {
             $limits[] = (int) $question->maxtries;
         }
-        if (!empty($question->showsolutions) && !empty($question->showsolutionsafter)) {
+        if ($feedbackallowed && !empty($question->showsolutions)
+                && !empty($question->showsolutionsafter)) {
             $limits[] = (int) $question->showsolutionsafter;
         }
         if (empty($limits)) {

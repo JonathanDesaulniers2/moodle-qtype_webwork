@@ -117,8 +117,19 @@ test qui la contient, comme pour tous les autres types de question de Moodle :
 
 Les **indices et solutions** suivent en plus le réglage « Rétroaction générale » des options de
 relecture : s'il est masqué, ni indice ni solution ne s'affichent, quelles que soient les cases
-cochées sur la question. En mode interactif, un avertissement en rouge indique à l'étudiant
-combien de tentatives il lui reste avant que la question ne se verrouille.
+cochées sur la question.
+
+En mode interactif, un **avertissement en rouge** indique à l'étudiant combien de tentatives il
+lui reste avant que la question ne se verrouille. Le décompte porte sur ce qui verrouille
+réellement la question pour cet étudiant :
+
+| Rétroaction générale (pendant la tentative) | Verrouillage et décompte |
+|---|---|
+| **Visible** | La plus petite des deux limites : nombre maximal de tentatives, ou nombre d'essais avant révélation de la solution |
+| **Masquée** | Le nombre maximal de tentatives seulement — la solution ne sera de toute façon jamais montrée, il serait trompeur de bloquer (et de décompter) sur ce seuil |
+
+Le nombre maximal de tentatives s'applique donc toujours, indépendamment de la rétroaction :
+c'est une contrainte mécanique, et l'étudiant en est toujours averti.
 
 ## Informations de débogage (enseignants)
 
