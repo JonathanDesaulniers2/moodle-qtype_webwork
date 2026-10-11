@@ -45,8 +45,9 @@ de questions de Moodle (`question/type/webwork`).
   (PHP), pas depuis le navigateur de l'étudiant — seuls les assets statiques
   (CSS/JS/MathJax) sont chargés directement par le navigateur depuis l'URL du
   renderer. Exception : avec MathJax 4 hébergé par le renderer, la synthèse
-  vocale de MathJax a besoin d'en-têtes CORS ; sans eux, le plugin la
-  désactive (réglage `renderercors`, voir `classes/mathjax.php`).
+  vocale de MathJax a besoin d'en-têtes CORS ; le module AMD vérifie leur
+  présence et, s'ils manquent, la désactive (voir
+  `classes/mathjax.php::without_enrichment()`).
 - Voir https://github.com/openwebwork/renderer pour l'installation du
   renderer lui-même (Docker recommandé).
 

@@ -67,15 +67,57 @@ let queue = Promise.resolve();
 const getBootstrap = () => (BootstrapModule.Popover ? BootstrapModule : BootstrapModule.default);
 
 /**
+ * Vérifie que le navigateur peut lire un fichier du renderer d'une origine
+ * à l'autre (en-tête CORS). Sans cela, la synthèse vocale de MathJax 4 ne
+ * peut pas charger ses dictionnaires, et cet échec empêche le rendu de
+ * toutes les formules : voir mathjax::without_enrichment() côté PHP.
+ *
+ * @param {string} url fichier à demander, ou chaîne vide (rien à vérifier)
+ * @returns {Promise<boolean>}
+ */
+const corsAllowed = (url) => {
+    if (!url) {
+        return Promise.resolve(true);
+    }
+    return fetch(url, {method: 'HEAD', mode: 'cors', cache: 'no-store'})
+        .then((response) => response.ok)
+        .catch(() => false);
+};
+
+/**
+ * Configuration MathJax sans enrichissement sémantique (donc sans synthèse
+ * vocale), avec le MathML d'assistance pour les lecteurs d'écran. Même
+ * règle que mathjax::without_enrichment() côté PHP.
+ *
+ * @param {string} json configuration MathJax (JSON)
+ * @returns {string}
+ */
+const withoutEnrichment = (json) => {
+    const config = JSON.parse(json || '{}');
+    config.options = config.options || {};
+    config.options.menuOptions = config.options.menuOptions || {};
+    const settings = config.options.menuOptions.settings = config.options.menuOptions.settings || {};
+    if (settings.enrich === undefined) {
+        settings.enrich = false;
+    }
+    if (settings.assistiveMml === undefined) {
+        settings.assistiveMml = true;
+    }
+    return JSON.stringify(config);
+};
+
+/**
  * Charge MathJax 4, une seule fois par page.
  *
  * Si une instance complète existe déjà (chargée par le filtre de Moodle,
  * ou par un autre plugin), on la réutilise. Sinon on configure puis on
  * lance le chargeur du filtre dans la foulée : une fois le chargement
  * lancé, un appel ultérieur de configure() par le filtre lui-même
- * n'écrase plus window.MathJax.
+ * n'écrase plus window.MathJax. Si le filtre a lancé le sien pendant la
+ * vérification CORS, c'est le sien qui sert : une seule instance quand
+ * même.
  *
- * @param {Object} params {mathjaxurl, mathjaxconfig, lang}, voir classes/mathjax.php
+ * @param {Object} params {mathjaxurl, mathjaxconfig, lang, probeurl}, voir classes/mathjax.php
  * @returns {Promise}
  */
 const getMathJax = (params) => {
@@ -86,19 +128,30 @@ const getMathJax = (params) => {
     if (window.MathJax && window.MathJax.startup && window.MathJax.typesetPromise) {
         loading = Promise.resolve();
     } else {
-        MathJaxLoader.configure(params);
-        loading = MathJaxLoader.loadMathJax();
+        loading = corsAllowed(params.probeurl).then((allowed) => {
+            if (window.MathJax && window.MathJax.startup && window.MathJax.typesetPromise) {
+                return null;
+            }
+            MathJaxLoader.configure({
+                mathjaxurl: params.mathjaxurl,
+                mathjaxconfig: allowed ? params.mathjaxconfig : withoutEnrichment(params.mathjaxconfig),
+                lang: params.lang,
+            });
+            return MathJaxLoader.loadMathJax();
+        });
     }
     mathJaxReady = loading
         .then(() => {
             const mj = window.MathJax;
             // Une adresse de filtre pointant encore vers MathJax 2 n'offre
             // pas cette API : on renonce plutôt que de planter plus loin.
-            if (!mj || !mj.startup || !mj.typesetPromise) {
+            if (!mj || !mj.startup || !mj.startup.promise) {
                 window.console.error('qtype_webwork : MathJax 3 ou plus est requis sous Moodle 5.');
                 return null;
             }
-            return mj.startup.promise.then(() => mj);
+            // MathJax 4 ne définit typesetPromise() qu'à la fin de son
+            // démarrage, pas au chargement de son script.
+            return mj.startup.promise.then(() => (window.MathJax.typesetPromise ? window.MathJax : null));
         })
         .catch((e) => {
             window.console.error('qtype_webwork : MathJax n\'a pas pu être chargé.', e);

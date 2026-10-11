@@ -16,10 +16,17 @@ se passe dans le navigateur :
   de charger d'une autre origine sans CORS.
 - **Synthèse vocale de MathJax et CORS** — essai réel (Edge, MathJax 4.1.3, renderer simulé sur
   une autre origine) : les dictionnaires de la synthèse vocale sont chargés par `fetch()`, bloqué
-  sans en-tête CORS, et ce blocage empêche le rendu de **toutes** les formules. Nouveau réglage
-  `renderercors` (décoché par défaut) : décoché, l'enrichissement sémantique est désactivé et le
-  MathML d'assistance activé à la place (lu directement par les lecteurs d'écran) ; coché,
-  MathJax garde son accessibilité complète.
+  sans en-tête CORS, et ce blocage empêche le rendu de **toutes** les formules. Le renderer
+  amont envoie `Access-Control-Allow-Origin: *` par défaut (`CORS_ORIGIN` de
+  `render_app.conf`) ; le module AMD le vérifie (requête `HEAD` sur un dictionnaire) avant de
+  charger MathJax et, s'il manque, désactive l'enrichissement sémantique et active le MathML
+  d'assistance (lu directement par les lecteurs d'écran). Aucun réglage à faire. L'aperçu en
+  iframe, outil d'enseignant, utilise toujours cette configuration prudente.
+- **Essai de bout en bout** (Edge sans interface) : module AMD compilé, chargeur MathJax du filtre
+  de Moodle 5.3 compilé depuis ses sources, Bootstrap 5.3.8, MathJax 4.1.3 et `feedback.js` /
+  `details-accordion.js` de PG 2.19 servis par un renderer simulé, avec et sans CORS : formules,
+  bulle de rétroaction (ouverture, prévisualisation rendue, fermeture par le X et par l'icône) et
+  indice fonctionnels, un seul MathJax chargé, aucune erreur JavaScript.
 - **Bootstrap 5 partagé** — Moodle 5 utilise lui aussi Bootstrap 5 : la copie du renderer
   (`bootstrap.bundle`) n'est plus chargée dans les pages de Moodle, où deux copies traiteraient
   chacune les clics sur les `data-bs-toggle` (menus ouverts puis refermés aussitôt). Celle de

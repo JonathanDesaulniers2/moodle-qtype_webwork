@@ -74,27 +74,44 @@ class mathjax {
         // installée à côté de MathJax sur le renderer.
         if (self::is_local()) {
             $config['loader']['paths']['fonts'] = rtrim($serverurl, '/') . '/pg_files/mathjax-v4/fonts';
-
-            // La synthèse vocale de MathJax 4 (speech-rule-engine) charge ses
-            // dictionnaires (sre/mathmaps/*.json) par fetch() : d'une origine
-            // à l'autre, le navigateur exige un en-tête CORS, que le renderer
-            // n'envoie pas par défaut. Sans lui, la requête échoue et MathJax
-            // ne rend plus AUCUNE formule (vérifié avec MathJax 4.1.3 :
-            // typesetPromise ne se résout jamais). Tant que l'administrateur
-            // n'a pas indiqué que le renderer envoie ces en-têtes, on
-            // désactive l'enrichissement sémantique (qui déclenche ce
-            // chargement) et on active le MathML d'assistance, que les
-            // lecteurs d'écran lisent directement.
-            if (!get_config('qtype_webwork', 'renderercors')) {
-                if (!isset($config['options']['menuOptions']['settings']['enrich'])) {
-                    $config['options']['menuOptions']['settings']['enrich'] = false;
-                }
-                if (!isset($config['options']['menuOptions']['settings']['assistiveMml'])) {
-                    $config['options']['menuOptions']['settings']['assistiveMml'] = true;
-                }
-            }
         }
         return $config;
+    }
+
+    /**
+     * La même configuration, sans l'enrichissement sémantique de MathJax.
+     *
+     * La synthèse vocale de MathJax 4 (speech-rule-engine) charge ses
+     * dictionnaires (sre/mathmaps/*.json) par fetch() : d'une origine à
+     * l'autre, le navigateur exige un en-tête CORS. Si le renderer n'en
+     * envoie pas, la requête échoue et MathJax ne rend plus AUCUNE formule
+     * (vérifié avec MathJax 4.1.3 : typesetPromise ne se résout jamais).
+     * Désactiver l'enrichissement évite ce chargement ; le MathML
+     * d'assistance, activé à la place, reste lu par les lecteurs d'écran.
+     *
+     * Le renderer amont envoie « Access-Control-Allow-Origin: * » par défaut
+     * (CORS_ORIGIN de render_app.conf) : ce repli ne sert que si un
+     * administrateur l'a restreint. Sur les pages de Moodle, le module AMD
+     * le vérifie lui-même avant de charger MathJax (voir probe_url()).
+     */
+    public static function without_enrichment(array $config): array {
+        if (!isset($config['options']['menuOptions']['settings']['enrich'])) {
+            $config['options']['menuOptions']['settings']['enrich'] = false;
+        }
+        if (!isset($config['options']['menuOptions']['settings']['assistiveMml'])) {
+            $config['options']['menuOptions']['settings']['assistiveMml'] = true;
+        }
+        return $config;
+    }
+
+    /**
+     * Fichier du renderer que le module AMD demande (requête CORS) pour
+     * savoir si la synthèse vocale de MathJax pourra charger ses
+     * dictionnaires -- voir without_enrichment(). Vide hors mode local :
+     * le CDN envoie toujours les en-têtes CORS.
+     */
+    public static function probe_url(string $serverurl): string {
+        return self::is_local() ? rtrim($serverurl, '/') . '/pg_files/mathjax-v4/sre/mathmaps/base.json' : '';
     }
 
     /**
@@ -105,6 +122,8 @@ class mathjax {
             'mathjaxurl' => self::url($serverurl),
             'mathjaxconfig' => json_encode(self::config($serverurl)),
             'lang' => self::language(),
+            // Lu par amd/src/question.js, ignoré par le chargeur du filtre.
+            'probeurl' => self::probe_url($serverurl),
         ];
     }
 
@@ -115,7 +134,7 @@ class mathjax {
         return explode('_', current_language())[0];
     }
 
-    protected static function is_local(): bool {
+    public static function is_local(): bool {
         return (get_config('qtype_webwork', 'mathjaxsource') ?: 'local') === 'local';
     }
 }

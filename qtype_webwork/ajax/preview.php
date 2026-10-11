@@ -102,7 +102,13 @@ $resolveasset = function (string $asset) use ($serverurl): string {
 // chargé directement : l'iframe est une page autonome, sans le chargeur AMD
 // de Moodle. Contrairement aux pages de Moodle, rien n'y rend les formules
 // à notre place : on laisse MathJax traiter la page dès son démarrage.
+// En mode local, configuration prudente (sans enrichissement sémantique,
+// voir mathjax::without_enrichment()) : l'aperçu est un outil d'enseignant,
+// inutile d'y ajouter une vérification CORS.
 $mathjaxconfig = \qtype_webwork\mathjax::config($serverurl);
+if (\qtype_webwork\mathjax::is_local()) {
+    $mathjaxconfig = \qtype_webwork\mathjax::without_enrichment($mathjaxconfig);
+}
 $mathjaxconfig['startup']['typeset'] = true;
 $mathjaxsrc = \qtype_webwork\mathjax::url($serverurl);
 

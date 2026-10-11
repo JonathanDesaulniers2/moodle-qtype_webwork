@@ -121,7 +121,15 @@ dossiers montés dans le conteneur du renderer (voir [dépôt du renderer](https
 | Préfixe de chemin — banque locale | `private` |
 | Langue des messages WeBWorK | `en` (par défaut) ou `fr-CA` si vous utilisez la variante francisée du renderer |
 | Source de MathJax | « Hébergé localement » (défaut, MathJax 4 du renderer ≥ v1.1) ou « CDN externe » (adresse du filtre MathJax de Moodle) |
-| Le renderer envoie les en-têtes CORS | Décoché par défaut. À cocher si le renderer autorise votre site Moodle (`CORS_ORIGIN`, voir le [docs/INSTALLATION.md](https://github.com/JonathanDesaulniers2/webwork-renderer/blob/main/docs/INSTALLATION.md) du renderer) : MathJax garde alors sa synthèse vocale. Décoché, les formules s'affichent quand même, avec le MathML d'assistance pour les lecteurs d'écran |
+
+
+**MathJax hébergé localement et CORS (Moodle 5.3)** — la synthèse vocale de MathJax 4 lit ses
+dictionnaires sur le renderer, ce que le navigateur n'autorise d'une origine à l'autre qu'avec un
+en-tête CORS. Le renderer en envoie un par défaut (`CORS_ORIGIN => '*'`). Le plugin vérifie à
+chaque page qu'il est bien là ; sinon, il désactive la synthèse vocale et active le MathML
+d'assistance (lu par les lecteurs d'écran) — sans quoi **aucune** formule ne s'afficherait.
+Rien à régler ; voir le [docs/INSTALLATION.md](https://github.com/JonathanDesaulniers2/webwork-renderer/blob/main/docs/INSTALLATION.md#cors--mathjax-4)
+du renderer si vous restreignez `CORS_ORIGIN`.
 
 ## 4. Créer une question
 
@@ -320,10 +328,10 @@ Autres couches de sécurité déjà en place dans le plugin :
   exhaustivement testées. Sous Moodle 5.3, les scripts de WeBWorK sont chargés après la page :
   le support des applets (`ww_applet_support.js`), qui attend l'événement `DOMContentLoaded`,
   ne s'initialise pas
-- Moodle 5.3 : avec MathJax hébergé localement et sans en-têtes CORS, un étudiant qui active
-  lui-même la synthèse vocale dans le menu contextuel de MathJax (clic droit sur une formule)
-  bloque le rendu des formules pour lui seul ; le réglage « Le renderer envoie les en-têtes
-  CORS » supprime ce cas
+- Moodle 5.3 : avec MathJax hébergé localement, si le renderer n'envoie **pas** d'en-tête CORS,
+  un étudiant qui réactive lui-même l'enrichissement des formules dans le menu contextuel de
+  MathJax (clic droit sur une formule) bloque le rendu des formules pour lui seul. Le renderer
+  envoie cet en-tête par défaut ; ce cas ne concerne que les installations qui l'ont retiré
 
 ## Structure des dossiers
 
