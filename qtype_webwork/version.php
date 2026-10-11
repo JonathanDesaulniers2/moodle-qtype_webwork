@@ -6,9 +6,9 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'qtype_webwork';
-$plugin->version   = 2026072850;
-$plugin->requires  = 2024100700; // Moodle 4.5.
-$plugin->supported = [405, 405]; // Testé sur Moodle 4.5 ; à étendre lors du passage à 5.x.
+$plugin->version   = 2026072843;
+$plugin->requires  = 2022112800; // Moodle 4.1 minimum (développé et testé sur 4.5).
+$plugin->supported = [401, 405]; // Variante 4.1 : développée et testée sur 4.5, non validée sur 4.1.
 $plugin->maturity  = MATURITY_ALPHA;
 $plugin->release   = '0.2.1';
 // NOTE : pas de $plugin->dependencies ici. 'qtype' n'est pas un nom de
