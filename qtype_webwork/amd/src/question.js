@@ -183,6 +183,54 @@ const typeset = (nodes) => {
     });
 };
 
+/** Marque (data-qtype-webwork-script) des scripts du renderer insérés par loadScripts(). */
+const SCRIPT_MARKER = 'qtypeWebworkScript';
+
+/** @type {boolean} define.amd déjà remplacé par l'accesseur de guardAmd(). */
+let amdGuarded = false;
+
+/**
+ * Cache define.amd aux seuls scripts du renderer.
+ *
+ * Les scripts du renderer au format UMD (jQuery UI notamment) se déclarent
+ * auprès du chargeur AMD dès qu'ils voient define.amd, au lieu de
+ * s'installer sur window.jQuery. RequireJS refuse ces define() anonymes
+ * (« Mismatched anonymous define() module ») et jQuery UI n'est jamais
+ * installé. Sous Moodle 4.x, ces scripts s'exécutaient avant RequireJS et
+ * le problème ne se posait pas.
+ *
+ * Masquer define.amd le temps du chargement ne convient pas : les
+ * bibliothèques UMD de Moodle chargées pendant ce temps (Mustache pour
+ * core/templates, par exemple) ne s'enregistraient plus, et des modules de
+ * Moodle restaient indéfinis. define.amd devient donc un accesseur qui ne
+ * répond undefined qu'au script en cours d'exécution s'il porte notre
+ * marque (document.currentScript) : les tests UMD se font au premier
+ * niveau du script, donc pendant son exécution.
+ */
+const guardAmd = () => {
+    const define = window.define;
+    if (amdGuarded || !define || !Object.prototype.hasOwnProperty.call(define, 'amd')) {
+        return;
+    }
+    const descriptor = Object.getOwnPropertyDescriptor(define, 'amd');
+    if (!descriptor.configurable) {
+        return;
+    }
+    amdGuarded = true;
+    let amd = define.amd;
+    Object.defineProperty(define, 'amd', {
+        configurable: true,
+        enumerable: descriptor.enumerable,
+        get: () => {
+            const current = document.currentScript;
+            return current && current.dataset[SCRIPT_MARKER] ? undefined : amd;
+        },
+        set: (value) => {
+            amd = value;
+        },
+    });
+};
+
 /**
  * Charge les scripts du renderer dans l'ordre donné (dépendances déjà
  * triées par response_parser::sort_js_by_priority()). Les scripts insérés
@@ -191,22 +239,26 @@ const typeset = (nodes) => {
  * @param {string[]} urls
  * @returns {Promise}
  */
-const loadScripts = (urls) => Promise.all(urls.map((url) => {
-    if (!scripts.has(url)) {
-        scripts.set(url, new Promise((resolve) => {
-            const script = document.createElement('script');
-            script.src = url;
-            script.async = false;
-            script.onload = resolve;
-            script.onerror = () => {
-                window.console.error('qtype_webwork : échec du chargement de ' + url);
-                resolve();
-            };
-            document.body.appendChild(script);
-        }));
-    }
-    return scripts.get(url);
-}));
+const loadScripts = (urls) => {
+    guardAmd();
+    return Promise.all(urls.map((url) => {
+        if (!scripts.has(url)) {
+            scripts.set(url, new Promise((resolve) => {
+                const script = document.createElement('script');
+                script.src = url;
+                script.async = false;
+                script.dataset[SCRIPT_MARKER] = '1';
+                script.onload = resolve;
+                script.onerror = () => {
+                    window.console.error('qtype_webwork : échec du chargement de ' + url);
+                    resolve();
+                };
+                document.body.appendChild(script);
+            }));
+        }
+        return scripts.get(url);
+    }));
+};
 
 /**
  * Câble les bulles de rétroaction de WeBWorK (icônes vert/rouge,

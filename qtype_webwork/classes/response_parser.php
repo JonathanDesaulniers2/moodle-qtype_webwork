@@ -162,6 +162,7 @@ class response_parser {
      *   'serverurl' => string (voir apply_resolve_image_urls -- images TikZ/graphiques générées dynamiquement)
      *   'entryassist' => string (voir apply_mark_foreign_entryassist -- MathQuill/MathView/None de cette question)
      *   'popovertoggle' => string (voir apply_rename_popover_toggle -- Moodle 5.x)
+     *   'texdelimiters' => bool (voir apply_convert_math_scripts -- MathJax 4, Moodle 5.x)
      */
     public static function transform(string $html, array $ops): string {
         // WeBWorK code en dur le texte "Hint" ; simple remplacement de texte,
@@ -214,8 +215,35 @@ class response_parser {
         if (!empty($ops['popovertoggle'])) {
             self::apply_rename_popover_toggle($xpath, (string) $ops['popovertoggle']);
         }
+        if (!empty($ops['texdelimiters'])) {
+            self::apply_convert_math_scripts($xpath);
+        }
 
         return self::serialize_children($dom);
+    }
+
+    /**
+     * Remplace les <script type="math/tex"> de PG par des délimiteurs
+     * \(...\) et \[...\].
+     *
+     * PG (commit 4b3e564, celui de l'image du renderer) écrit toutes les
+     * formules sous cette forme (PGbasicmacros.pl, mode d'affichage
+     * « MathJax »), propre à MathJax v2. MathJax 3 et plus ne lisent plus
+     * ces balises : sous Moodle 5.x (MathJax 4), sans cette conversion,
+     * AUCUNE formule de l'énoncé ne s'affiche (« un rayon de . ») -- sans la
+     * moindre erreur, puisque le navigateur ignore simplement ces scripts.
+     *
+     * On insère un nœud texte : le DOM échappe lui-même les < et & de la
+     * formule à la sérialisation, et MathJax lit le texte décodé.
+     */
+    protected static function apply_convert_math_scripts(\DOMXPath $xpath): void {
+        $query = '//script[starts-with(translate(@type, "MATHTEX", "mathtex"), "math/tex")]';
+        foreach (iterator_to_array($xpath->query($query)) as $script) {
+            $display = stripos($script->getAttribute('type'), 'mode=display') !== false;
+            $tex = $script->textContent;
+            $text = $display ? '\\[' . $tex . '\\]' : '\\(' . $tex . '\\)';
+            $script->parentNode->replaceChild($script->ownerDocument->createTextNode($text), $script);
+        }
     }
 
     /**

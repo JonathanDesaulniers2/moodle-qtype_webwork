@@ -80,11 +80,12 @@ if ($html === '') {
 
 // Champs désactivés (l'aperçu n'est pas interactif) et indicateurs de
 // correction retirés ; les images générées (TikZ, etc.) sont résolues en
-// URL absolues.
+// URL absolues ; formules converties pour MathJax 4.
 $html = \qtype_webwork\response_parser::transform($html, [
     'disable' => true,
     'stripcorrectness' => true,
     'serverurl' => $serverurl,
+    'texdelimiters' => true,
 ]);
 
 /**

@@ -696,4 +696,13 @@ function xmldb_qtype_webwork_upgrade($oldversion) {
         // pg_files/mathjax-v4/ sur le renderer (image v1.1 ou plus).
         upgrade_plugin_savepoint(true, 2026101100, 'qtype', 'webwork');
     }
+
+    if ($oldversion < 2026101101) {
+        // Pas de changement de schéma -- formules <script type="math/tex">
+        // de PG converties en \(...\) pour MathJax 4 (aucune ne s'affichait
+        // sous Moodle 5.3), et define.amd caché aux seuls scripts UMD du
+        // renderer (jQuery UI), voir amd/src/question.js. Montée de version pour vider
+        // les caches JavaScript des sites déjà en 2026101100.
+        upgrade_plugin_savepoint(true, 2026101101, 'qtype', 'webwork');
+    }
 }

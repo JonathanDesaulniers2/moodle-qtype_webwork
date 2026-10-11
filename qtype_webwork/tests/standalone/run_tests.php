@@ -188,6 +188,23 @@ check_true('les autres data-bs-toggle (collapse) ne sont pas touchés',
 check_true('sans l\'option, data-bs-toggle="popover" est laissé tel quel (Moodle 4.x, aperçu en iframe)',
     strpos(response_parser::transform($button, []), 'data-bs-toggle="popover"') !== false);
 
+// --- transform() : formules <script type="math/tex"> (MathJax 4) ------------
+echo "\n-- transform() / texdelimiters --\n";
+// Sortie réelle de PG 4b3e564 (PGbasicmacros.pl), mode d'affichage « MathJax ».
+$pgmath = '<p>Un rayon de <script type="math/tex">7.3</script> <script type="math/tex">cm</script>.</p>'
+    . '<p><script type="math/tex; mode=display">\frac{a}{b} < 1 & x</script></p>'
+    . '<button data-bs-content="&lt;script type=&quot;math/tex&quot;&gt;2x&lt;/script&gt;">i</button>';
+$converted = response_parser::transform($pgmath, ['texdelimiters' => true]);
+check_true('plus aucun <script type="math/tex"> dans le corps',
+    stripos(preg_replace('/data-bs-content="[^"]*"/', '', $converted), '<script') === false);
+check_true('formule en ligne convertie en \\(...\\)', strpos($converted, 'Un rayon de \\(7.3\\) \\(cm\\).') !== false);
+check_true('formule centrée (mode=display) convertie en \\[...\\], < et & échappés',
+    strpos($converted, '\\[\\frac{a}{b} &lt; 1 &amp; x\\]') !== false);
+check_true('le contenu des bulles est laissé à apply_fix_popover_content()',
+    strpos($converted, 'ww-math-preview') !== false);
+check_true('sans l\'option, les <script type="math/tex"> sont conservés (Moodle 4.x, MathJax v2)',
+    strpos(response_parser::transform($pgmath, []), '<script type="math/tex">7.3</script>') !== false);
+
 // --- Résumé ---------------------------------------------------------------
 echo "\n=== Résumé : " . ($total - $failures) . "/$total tests réussis ===\n";
 

@@ -6,11 +6,11 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'qtype_webwork';
-$plugin->version   = 2026101100;
+$plugin->version   = 2026101101;
 $plugin->requires  = 2026100500; // Moodle 5.3.
 $plugin->supported = [503, 503]; // Branche MOODLE_503_STABLE ; Moodle 4.5 : branche MOODLE_405_STABLE.
 $plugin->maturity  = MATURITY_BETA;
-$plugin->release   = '2.0-moodle53';
+$plugin->release   = '2.0.1-moodle53';
 // NOTE : pas de $plugin->dependencies ici. 'qtype' n'est pas un nom de
 // plugin installable (c'est le préfixe du TYPE de plugin, comme mod_ ou
 // block_) -- le moteur de question fait partie du noyau Moodle et n'a pas

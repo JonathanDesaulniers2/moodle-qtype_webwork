@@ -187,6 +187,7 @@ class qtype_webwork_renderer extends qtype_renderer {
             'serverurl' => $question->serverurl,
             'entryassist' => $question->entryassist,
             'popovertoggle' => self::POPOVER_TOGGLE_ATTRIBUTE,
+            'texdelimiters' => true,
         ]);
 
         // Correctifs CSS pour l'éditeur MathQuill dans notre contexte

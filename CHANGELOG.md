@@ -1,5 +1,30 @@
 # Journal des modifications
 
+## 2026101101 — correctifs Moodle 5.3 (`qtype_webwork` 2.0.1-moodle53)
+
+Trouvés au premier essai sur une vraie instance Moodle 5.3 (Windows, Apache/PHP 8.3) reliée à un
+vrai renderer (PG `4b3e564`, le commit sur lequel l'image est épinglée), dans un test interactif
+avec des problèmes réels de `private/` et de `Library/`.
+
+- **Aucune formule ne s'affichait** — PG écrit ses formules en `<script type="math/tex">`
+  (`PGbasicmacros.pl`, mode « MathJax »), forme propre à MathJax v2. MathJax 4 ne lit plus ces
+  balises : l'énoncé s'affichait sans ses formules (« un rayon de . »), sans aucune erreur. L'essai
+  de la version 2026101100 utilisait du HTML déjà écrit avec `\(...\)` et ne pouvait pas le voir.
+  `response_parser::transform()` convertit désormais ces balises en `\(...\)` et `\[...\]`
+  (option `texdelimiters`, page de test et aperçu de la banque de questions). Le contenu des
+  bulles de prévisualisation reste traité par `apply_fix_popover_content()`.
+- **jQuery UI jamais installé** — le module AMD insérait les scripts du renderer pendant que
+  RequireJS expose `define.amd` : jQuery UI (UMD) s'y déclarait en module anonyme, refusé
+  (« Mismatched anonymous define() module »). `define.amd` devient un accesseur qui ne répond
+  `undefined` qu'aux scripts insérés par le plugin (`document.currentScript` porte la marque
+  `data-qtype-webwork-script`). Un premier essai qui masquait `define.amd` le temps du chargement a
+  été écarté : les bibliothèques UMD de Moodle chargées en même temps (Mustache, pour
+  `core/templates`) ne s'enregistraient plus (`prefetchTemplates` / `get_strings` indéfinis).
+- `amd/build/` recompilé avec les réglages de `grunt amd` de Moodle 5.3 (Babel 7.17.5,
+  `preset-env` 7.16.11, mêmes cibles, Terser) ; la même chaîne redonne à l'octet près le build de
+  2026101100 à partir de son code source.
+- 5 tests autonomes ajoutés (51/51).
+
 ## 2026101100 — version Moodle 5.3 (`v2.0-moodle53-beta`, branche `MOODLE_503_STABLE`)
 
 Les trois plugins passent à `requires = 2026100500` (Moodle 5.3). Aucun changement de base de
