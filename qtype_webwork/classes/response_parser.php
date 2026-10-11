@@ -699,10 +699,21 @@ class response_parser {
         self::remove_matches($xpath, '//div[@role="alert"]');
 
         // Retire les paragraphes de score ("You received a score of X% ...").
+        // Repérés par leur texte, dans chaque langue que le renderer peut
+        // renvoyer : avec l'image fr et language=fr-CA, ils arrivent en
+        // français (catalogues fr-CA.renderer.po et fr-CA.po), et un filtre
+        // anglais seul laissait le résultat visible en mode différé.
+        $scoremarkers = [
+            'received a score', 'partial credit',            // Anglais.
+            'avez obtenu un résultat', 'partie des points',  // fr-CA (webwork-renderer).
+        ];
         foreach (iterator_to_array($xpath->query('//p')) as $node) {
             $text = $node->textContent;
-            if (stripos($text, 'received a score') !== false || stripos($text, 'partial credit') !== false) {
-                $node->parentNode->removeChild($node);
+            foreach ($scoremarkers as $marker) {
+                if (mb_stripos($text, $marker) !== false) {
+                    $node->parentNode->removeChild($node);
+                    break;
+                }
             }
         }
     }

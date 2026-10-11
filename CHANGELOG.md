@@ -23,7 +23,15 @@ avec des problèmes réels de `private/` et de `Library/`.
 - `amd/build/` recompilé avec les réglages de `grunt amd` de Moodle 5.3 (Babel 7.17.5,
   `preset-env` 7.16.11, mêmes cibles, Terser) ; la même chaîne redonne à l'octet près le build de
   2026101100 à partir de son code source.
-- 5 tests autonomes ajoutés (51/51).
+- **Fuite du résultat en mode différé avec le renderer francisé** — `strip_correctness()` ne
+  retirait les paragraphes de score (« You received a score… », « …partial credit… ») qu'en
+  anglais. Avec l'image `fr` et `language=fr-CA`, ils arrivent désormais en français (« Vous avez
+  obtenu un résultat… », « …une partie des points… ») et restaient visibles avant la fin du test.
+  Les deux langues sont maintenant reconnues.
+- Note : la langue d'une question est figée dans sa tentative par le renderer (le `problemJWT`
+  chiffré du `sessionJWT` reprend les paramètres du premier rendu). Changer le réglage
+  `language` ne touche que les tentatives commencées ensuite.
+- 8 tests autonomes ajoutés (54/54).
 
 ## 2026101100 — version Moodle 5.3 (`v2.0-moodle53-beta`, branche `MOODLE_503_STABLE`)
 

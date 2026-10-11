@@ -188,6 +188,16 @@ check_true('les autres data-bs-toggle (collapse) ne sont pas touchés',
 check_true('sans l\'option, data-bs-toggle="popover" est laissé tel quel (Moodle 4.x, aperçu en iframe)',
     strpos(response_parser::transform($button, []), 'data-bs-toggle="popover"') !== false);
 
+// --- strip_correctness() : score en français (image fr, language=fr-CA) ----
+echo "\n-- strip_correctness() / score fr-CA --\n";
+$frscore = '<div><p>Vous avez obtenu un résultat de 50% pour cette tentative.</p>'
+    . '<p>Vous pouvez obtenir une partie des points pour ce problème.</p><p>Énoncé conservé.</p></div>';
+$frstripped = response_parser::strip_correctness($frscore);
+check_true('paragraphe « Vous avez obtenu un résultat » retiré (mode différé)',
+    mb_strpos($frstripped, 'avez obtenu') === false);
+check_true('paragraphe « partie des points » retiré', mb_strpos($frstripped, 'partie des points') === false);
+check_true('les autres paragraphes sont conservés', mb_strpos($frstripped, 'Énoncé conservé.') !== false);
+
 // --- transform() : formules <script type="math/tex"> (MathJax 4) ------------
 echo "\n-- transform() / texdelimiters --\n";
 // Sortie réelle de PG 4b3e564 (PGbasicmacros.pl), mode d'affichage « MathJax ».
