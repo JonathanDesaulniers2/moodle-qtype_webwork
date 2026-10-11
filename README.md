@@ -11,7 +11,18 @@ Trois plugins à installer ensemble :
   par `qtype_webwork`. Sans lui, l'importation reste accessible par URL directe, mais la colonne
   d'aperçu n'est pas disponible.
 
-**Compatibilité** : Moodle 4.5 (testé sur 4.5.1+). Une version pour Moodle 5.3 est prévue.
+**Compatibilité** : une branche et une release par version de Moodle. Téléchargez les `.zip` de
+la release qui correspond à **votre** version de Moodle — un plugin d'une autre branche refusera
+de s'installer (`requires`) ou ne fonctionnera pas correctement.
+
+| Moodle | Branche | Release | État |
+|---|---|---|---|
+| **5.3** | `MOODLE_503_STABLE` (= `main`) | `v2.0-moodle53-beta` | Bêta — adaptée au code de Moodle 5.3 (MathJax 4, Bootstrap 5), pas encore validée sur une vraie instance |
+| **4.5** | `MOODLE_405_STABLE` | `v1.0-moodle45` | Validée (testée sur 4.5.1+) |
+| **4.1** | `MOODLE_401_STABLE` | `v1.0-moodle41-beta` | Bêta — non validée ; sans `qbank_webworkimport` (pas d'onglet d'importation ni de colonne d'aperçu) |
+
+Les releases « bêta » sont publiées comme *pre-release* sur GitHub : téléchargeables, mais à
+essayer d'abord sur une instance de test.
 
 Les trois dépendent d'un [renderer WeBWorK](https://github.com/JonathanDesaulniers2/webwork-renderer)
 accessible sur le réseau — installez-le d'abord. Des images Docker pré-construites sont
@@ -24,8 +35,9 @@ avant lui.
 
 1. *Administration du site → Plugins → Installer des plugins*
 2. Téléchargez les trois `.zip` depuis la
-   [dernière release](https://github.com/JonathanDesaulniers2/moodle-qtype_webwork/releases),
-   ou compressez vous-même chaque dossier de ce dépôt
+   [release de votre version de Moodle](https://github.com/JonathanDesaulniers2/moodle-qtype_webwork/releases)
+   (voir le tableau ci-dessus), ou compressez vous-même chaque dossier de la branche
+   correspondante
 3. Téléversez **`qtype_webwork.zip` en premier**, confirmez la mise à jour de la base de données
 4. Puis `qbehaviour_webwork.zip`, puis `qbank_webworkimport.zip`
 5. *Administration du site → Développement → Purger tous les caches*

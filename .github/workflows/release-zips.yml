@@ -1,8 +1,15 @@
 name: Générer les archives de release
 
-# À chaque étiquette de version (ex. v1.0-moodle45), compresse les deux
-# plugins et les attache à la release GitHub -- ce sont ces .zip que
+# À chaque étiquette de version, compresse les plugins de la branche
+# étiquetée et les attache à la release GitHub -- ce sont ces .zip que
 # Moodle attend dans « Installer des plugins ».
+#
+# Une branche par version de Moodle (MOODLE_401_STABLE, MOODLE_405_STABLE,
+# MOODLE_503_STABLE), une étiquette parallèle par branche :
+#   v1.0-moodle45         release validée sur une vraie instance
+#   v1.0-moodle41-beta    publiée comme « pre-release » (suffixe -beta,
+#   v2.0-moodle53-beta    -alpha ou -rc) : pas encore validée en conditions
+#                         réelles, mais téléchargeable.
 on:
   push:
     tags:
@@ -22,24 +29,35 @@ jobs:
       - name: Vérifier la cohérence des versions
         run: |
           # Moodle refuse une mise à jour si le numéro de version du plugin
-          # n'a pas augmenté -- on l'affiche ici pour le retrouver
-          # facilement dans les notes de release.
-          grep -H 'plugin->version' qtype_webwork/version.php qbehaviour_webwork/version.php qbank_webworkimport/version.php
+          # n'a pas augmenté, et l'installation échoue (upgradeerror) si le
+          # dernier upgrade_plugin_savepoint() ne correspond pas à
+          # $plugin->version -- on vérifie les deux avant de publier.
+          grep -H -E 'plugin->(version|requires|release)' */version.php
+          v=$(grep -oP 'plugin->version\s*=\s*\K[0-9]+' qtype_webwork/version.php)
+          last=$(grep -oP 'upgrade_plugin_savepoint\(true, \K[0-9]+' qtype_webwork/db/upgrade.php | tail -1)
+          if [ "$v" != "$last" ]; then
+            echo "::error::qtype_webwork : version $v, mais dernier savepoint $last"
+            exit 1
+          fi
 
       - name: Compresser les plugins
         run: |
-          zip -r qtype_webwork.zip qtype_webwork -x '*.DS_Store' '*/.git/*'
-          zip -r qbehaviour_webwork.zip qbehaviour_webwork -x '*.DS_Store' '*/.git/*'
-          zip -r qbank_webworkimport.zip qbank_webworkimport -x '*.DS_Store' '*/.git/*'
+          # Toutes les branches n'ont pas les trois plugins (la variante
+          # Moodle 4.1 n'a pas qbank_webworkimport) : on compresse ceux qui
+          # sont présents.
+          for p in qtype_webwork qbehaviour_webwork qbank_webworkimport; do
+            if [ -d "$p" ]; then
+              zip -r "$p.zip" "$p" -x '*.DS_Store' '*/.git/*'
+            fi
+          done
+          ls -l *.zip
 
       - name: Attacher les archives à la release
         if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            qtype_webwork.zip
-            qbehaviour_webwork.zip
-            qbank_webworkimport.zip
+          files: '*.zip'
+          prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') || contains(github.ref_name, '-rc') }}
 
       # Sur un déclenchement manuel (sans étiquette), on garde quand même
       # les archives comme artefact téléchargeable, utile pour tester une
@@ -49,7 +67,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: plugins
-          path: |
-            qtype_webwork.zip
-            qbehaviour_webwork.zip
-            qbank_webworkimport.zip
+          path: '*.zip'
