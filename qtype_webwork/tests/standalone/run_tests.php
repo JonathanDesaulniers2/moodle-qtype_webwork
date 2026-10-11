@@ -22,6 +22,14 @@ require_once __DIR__ . '/../../classes/response_parser.php';
 
 use qtype_webwork\response_parser;
 
+// Substitut de la fonction de Moodle : strip_correctness() remplace le titre
+// des bulles de prévisualisation par une chaîne de langue.
+if (!function_exists('get_string')) {
+    function get_string(string $identifier, string $component = '', $a = null): string {
+        return '[' . $identifier . ']';
+    }
+}
+
 $failures = 0;
 $total = 0;
 
