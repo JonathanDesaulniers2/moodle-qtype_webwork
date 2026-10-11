@@ -98,10 +98,13 @@ $resolveasset = function (string $asset) use ($serverurl): string {
     return rtrim($serverurl, '/') . '/' . ltrim($asset, '/');
 };
 
-$mathjaxsource = get_config('qtype_webwork', 'mathjaxsource') ?: 'local';
-$mathjaxsrc = ($mathjaxsource === 'cdn')
-    ? 'https://cdn.jsdelivr.net/npm/mathjax@2.7.9/MathJax.js?config=TeX-MML-AM_CHTML'
-    : $resolveasset('pg_files/mathjax-v2/MathJax.js?config=TeX-MML-AM_CHTML');
+// MathJax 4, comme sur les pages de test (voir classes/mathjax.php), mais
+// chargé directement : l'iframe est une page autonome, sans le chargeur AMD
+// de Moodle. Contrairement aux pages de Moodle, rien n'y rend les formules
+// à notre place : on laisse MathJax traiter la page dès son démarrage.
+$mathjaxconfig = \qtype_webwork\mathjax::config($serverurl);
+$mathjaxconfig['startup']['typeset'] = true;
+$mathjaxsrc = \qtype_webwork\mathjax::url($serverurl);
 
 header('Content-Type: text/html; charset=utf-8');
 ?><!DOCTYPE html>
@@ -113,11 +116,7 @@ header('Content-Type: text/html; charset=utf-8');
 <link rel="stylesheet" href="<?php echo s($resolveasset($css)); ?>">
 <?php } ?>
 <script>
-window.MathJax = window.MathJax || {
-    tex2jax: { inlineMath: [['\\(', '\\)']], processEscapes: true },
-    TeX: { extensions: ['color.js', 'cancel.js', 'enclose.js', 'noErrors.js', 'noUndefined.js'] },
-    messageStyle: 'none'
-};
+window.MathJax = <?php echo json_encode($mathjaxconfig); ?>;
 </script>
 <script src="<?php echo s($mathjaxsrc); ?>"></script>
 <style>

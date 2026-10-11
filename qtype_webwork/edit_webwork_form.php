@@ -194,7 +194,7 @@ class qtype_webwork_edit_form extends question_edit_form {
         $html = html_writer::tag('button', $buttonlabel, [
             'type' => 'button',
             'id' => $idprefix . '_btn',
-            'class' => 'btn btn-secondary btn-sm mb-2 mr-2',
+            'class' => 'btn btn-secondary btn-sm mb-2 me-2',
         ]);
         $html .= html_writer::tag('div', '', [
             'id' => $idprefix . '_container',
@@ -294,7 +294,7 @@ class qtype_webwork_edit_form extends question_edit_form {
         $html = html_writer::tag('button', get_string('editorbutton', 'qtype_webwork'), [
             'type' => 'button',
             'id' => 'qtype_webwork_editor_btn',
-            'class' => 'btn btn-secondary btn-sm mb-2 ml-2',
+            'class' => 'btn btn-secondary btn-sm mb-2 ms-2',
         ]);
 
         $html .= html_writer::start_tag('div', [

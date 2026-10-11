@@ -142,7 +142,7 @@ class bulk_import_form extends \moodleform {
             . 'link.textContent = "\u{1F4C1} " + item.name;'
             . 'var pick = document.createElement("button");'
             . 'pick.type = "button";'
-            . 'pick.className = "btn btn-link btn-sm p-0 ml-2";'
+            . 'pick.className = "btn btn-link btn-sm p-0 ms-2";'
             . 'pick.style.marginLeft = ".5rem";'
             . 'pick.textContent = S.select;'
             . 'pick.addEventListener("click", function(e) {'

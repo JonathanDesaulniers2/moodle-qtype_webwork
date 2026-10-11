@@ -79,6 +79,13 @@ if ($ADMIN->fulltree) {
         ]
     ));
 
+    $settings->add(new admin_setting_configcheckbox(
+        'qtype_webwork/renderercors',
+        get_string('renderercors', 'qtype_webwork'),
+        get_string('renderercors_help', 'qtype_webwork'),
+        0
+    ));
+
     $settings->add(new admin_setting_configtext(
         'qtype_webwork/language',
         get_string('language', 'qtype_webwork'),

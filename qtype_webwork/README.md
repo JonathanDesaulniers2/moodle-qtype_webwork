@@ -1,15 +1,29 @@
-# qtype_webwork — squelette de plugin Moodle (ciblant Moodle 4.5)
+# qtype_webwork — plugin Moodle (branche Moodle 5.3)
 
 Intègre le **WeBWorK Standalone Renderer** comme type de question dans la banque
 de questions de Moodle (`question/type/webwork`).
 
-> **Note de version** : ce plugin cible désormais Moodle 4.5 (build
-> `2024100700`), suite à des difficultés d'installation de Moodle 5.2 côté
-> développement. Le code n'utilise aucune API propre à 5.2 — la bascule vers
-> 5.x ultérieurement ne devrait nécessiter que la mise à jour de
-> `$plugin->requires`/`$plugin->supported` dans `version.php` et une
-> vérification rapide des notes de version Moodle entre les deux versions
-> (voir https://moodledev.io/general/releases/5.2 le moment venu).
+> **Note de version** : cette branche (`MOODLE_503_STABLE`) cible Moodle 5.3
+> (build `2026100500`). La version Moodle 4.5 vit dans la branche
+> `MOODLE_405_STABLE`. Les API PHP utilisées (moteur de question, banque de
+> questions, comportements) n'ont pas changé entre 4.5 et 5.3 ; ce qui a
+> changé, c'est le navigateur :
+>
+> - **MathJax 4** : le filtre MathJax de Moodle 5 charge MathJax 4 et
+>   remplace `window.MathJax`, ce qui rendait inutilisable le MathJax v2 que
+>   le plugin chargeait sous 4.x. Le plugin passe désormais par le chargeur
+>   du filtre (`filter_mathjaxloader/loader`) — une seule instance par page —,
+>   avec la copie de MathJax 4 du renderer (`pg_files/mathjax-v4/`, sortie
+>   SVG) ou celle du CDN configuré dans le filtre. Voir `classes/mathjax.php`.
+> - **Bootstrap 5** : Moodle 5 utilise lui aussi Bootstrap 5. La copie
+>   fournie par le renderer n'est plus chargée (deux copies feraient ouvrir
+>   puis refermer aussitôt les menus de Moodle) ; celle de Moodle est prêtée
+>   aux scripts de WeBWorK. Les icônes de rétroaction perdent leur
+>   `data-bs-toggle="popover"`, que le thème Boost de Moodle 5 initialise
+>   lui-même.
+> - Les scripts en ligne de 4.x sont remplacés par le module AMD
+>   `qtype_webwork/question` (`amd/src/question.js`, compilé dans
+>   `amd/build/`).
 
 ## Installation
 
@@ -27,10 +41,12 @@ de questions de Moodle (`question/type/webwork`).
 - Le renderer doit être accessible en HTTP(S) depuis le serveur Moodle
   (attention aux règles de pare-feu si Moodle et le renderer sont sur des
   réseaux différents).
-- CORS n'est pas un problème puisque les appels à `/render-api` se font
-  **côté serveur** (PHP), pas depuis le navigateur de l'étudiant — seuls les
-  assets statiques (CSS/JS/MathJax) sont chargés directement par le
-  navigateur depuis l'URL du renderer.
+- CORS n'est pas un problème pour `/render-api`, appelé **côté serveur**
+  (PHP), pas depuis le navigateur de l'étudiant — seuls les assets statiques
+  (CSS/JS/MathJax) sont chargés directement par le navigateur depuis l'URL du
+  renderer. Exception : avec MathJax 4 hébergé par le renderer, la synthèse
+  vocale de MathJax a besoin d'en-têtes CORS ; sans eux, le plugin la
+  désactive (réglage `renderercors`, voir `classes/mathjax.php`).
 - Voir https://github.com/openwebwork/renderer pour l'installation du
   renderer lui-même (Docker recommandé).
 

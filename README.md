@@ -6,7 +6,7 @@ Trois plugins à installer ensemble :
   bibliothèque, fenêtre d'édition intégrée, importation en lot).
 - **`qbehaviour_webwork`** — le comportement de notation associé (modes différé et interactif).
 - **`qbank_webworkimport`** — ajoute à la banque de questions l'onglet « Importer WeBWorK » et la
-  colonne « Aperçu WeBWorK ». Moodle 4.x réserve l'extension de la banque de questions aux plugins
+  colonne « Aperçu WeBWorK ». Moodle (4.x comme 5.x) réserve l'extension de la banque de questions aux plugins
   de type `qbank` : ce plugin compagnon est le point d'entrée officiel vers les fonctions fournies
   par `qtype_webwork`. Sans lui, l'importation reste accessible par URL directe, mais la colonne
   d'aperçu n'est pas disponible.
@@ -23,6 +23,24 @@ de s'installer (`requires`) ou ne fonctionnera pas correctement.
 
 Les releases « bêta » sont publiées comme *pre-release* sur GitHub : téléchargeables, mais à
 essayer d'abord sur une instance de test.
+
+### Ce qui change avec Moodle 5.3
+
+Les fonctionnalités sont les mêmes qu'en 4.5. Ce qui change est invisible pour l'enseignant :
+
+- **MathJax 4** au lieu de MathJax v2 — Moodle 5 charge lui-même MathJax 4, et deux versions de
+  MathJax ne peuvent pas cohabiter sur une page. Le plugin utilise donc la même instance que
+  Moodle. Avec le réglage « Hébergé localement » (défaut), cette instance vient du renderer :
+  **il faut une image du renderer v1.1 ou plus récente**, qui contient MathJax 4.
+- **Bootstrap 5** partagé avec Moodle — la copie fournie par le renderer n'est plus chargée
+  dans les pages de Moodle (elle ferait ouvrir puis refermer aussitôt les menus de Moodle 5).
+- **Banques de questions** — depuis Moodle 5.0, une banque est toujours une activité
+  (`mod_qbank` ou la banque propre d'un test) ; l'onglet « Importer WeBWorK » s'y trouve comme
+  avant.
+
+Passer d'un Moodle 4.5 à 5.3 : mettez d'abord Moodle à jour, puis installez les `.zip` de la
+release 5.3 par-dessus — les numéros de version sont plus élevés, les questions et tentatives
+existantes sont conservées (aucun changement de base de données).
 
 Les trois dépendent d'un [renderer WeBWorK](https://github.com/JonathanDesaulniers2/webwork-renderer)
 accessible sur le réseau — installez-le d'abord. Des images Docker pré-construites sont
@@ -102,6 +120,8 @@ dossiers montés dans le conteneur du renderer (voir [dépôt du renderer](https
 | Préfixe de chemin — bibliothèque libre | `Library` |
 | Préfixe de chemin — banque locale | `private` |
 | Langue des messages WeBWorK | `en` (par défaut) ou `fr-CA` si vous utilisez la variante francisée du renderer |
+| Source de MathJax | « Hébergé localement » (défaut, MathJax 4 du renderer ≥ v1.1) ou « CDN externe » (adresse du filtre MathJax de Moodle) |
+| Le renderer envoie les en-têtes CORS | Décoché par défaut. À cocher si le renderer autorise votre site Moodle (`CORS_ORIGIN`, voir le [docs/INSTALLATION.md](https://github.com/JonathanDesaulniers2/webwork-renderer/blob/main/docs/INSTALLATION.md) du renderer) : MathJax garde alors sa synthèse vocale. Décoché, les formules s'affichent quand même, avec le MathML d'assistance pour les lecteurs d'écran |
 
 ## 4. Créer une question
 
@@ -297,14 +317,22 @@ Autres couches de sécurité déjà en place dans le plugin :
 - Le choix MathQuill/MathView/aucun (par question) nécessite `patch_renderproblem.pl` côté
   renderer — sans lui, MathQuill s'affiche toujours par défaut peu importe le réglage choisi
 - Fonctionnalités PG avancées (applets Java/JS spécialisés, macros peu courantes) non
-  exhaustivement testées
+  exhaustivement testées. Sous Moodle 5.3, les scripts de WeBWorK sont chargés après la page :
+  le support des applets (`ww_applet_support.js`), qui attend l'événement `DOMContentLoaded`,
+  ne s'initialise pas
+- Moodle 5.3 : avec MathJax hébergé localement et sans en-têtes CORS, un étudiant qui active
+  lui-même la synthèse vocale dans le menu contextuel de MathJax (clic droit sur une formule)
+  bloque le rendu des formules pour lui seul ; le réglage « Le renderer envoie les en-têtes
+  CORS » supprime ce cas
 
 ## Structure des dossiers
 
 ```
 qtype_webwork/
-├── classes/            webwork_client.php (appels HTTP au renderer), response_parser.php
-├── ajax/                browse.php (navigation en arborescence)
+├── amd/src/question.js  mise en route côté navigateur (Moodle 5.3) ; compilé dans amd/build/
+├── classes/            webwork_client.php (appels HTTP au renderer), response_parser.php,
+│                        mathjax.php (adresse et configuration de MathJax 4)
+├── ajax/                browse.php (navigation en arborescence), preview.php (aperçu en iframe)
 ├── db/                  install.xml, upgrade.php, caches.php
 ├── lang/en/             chaînes de langue
 ├── edit_webwork_form.php

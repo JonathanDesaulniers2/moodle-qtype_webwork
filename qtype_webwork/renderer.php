@@ -5,21 +5,12 @@ require_once($CFG->dirroot . '/question/type/webwork/classes/response_parser.php
 
 class qtype_webwork_renderer extends qtype_renderer {
 
-    /** @var bool s'assure que MathJax v2 n'est chargé qu'une seule fois par page. */
-    protected static $mathjaxloaded = false;
-
     /**
-     * @var bool s'assure que le script de câblage des popovers Bootstrap
-     * n'est émis qu'une seule fois par page, même si render() est appelé
-     * plusieurs fois (plusieurs questions WeBWorK sur une même page de
-     * quiz, ou page de relecture). Le script re-scanne TOUTES les bulles
-     * de la page via querySelectorAll à chaque exécution -- l'émettre
-     * plusieurs fois empilait les écouteurs "shown.bs.popover" (un par
-     * question rendue), et le bouton "X" finissait câblé sur une instance
-     * Bootstrap déjà périmée (disposée par un passage ultérieur) au lieu
-     * de la dernière instance réellement active.
+     * Attribut qui remplace data-bs-toggle="popover" dans le HTML du
+     * renderer (voir response_parser::apply_rename_popover_toggle() et
+     * amd/src/question.js).
      */
-    protected static $popoverscriptoutput = false;
+    const POPOVER_TOGGLE_ATTRIBUTE = 'data-qtype-webwork-toggle';
 
     /**
      * @var bool s'assure que le leurre pour "window.frameElement" n'est
@@ -44,132 +35,18 @@ class qtype_webwork_renderer extends qtype_renderer {
      */
     protected static $emittedassets = [];
 
-    /**
-     * Charge MathJax v2 -- par défaut hébergé localement par le renderer
-     * (voir Dockerfile.with-latex) plutôt que via un CDN public. Un réseau
-     * lent/instable pouvait faire échouer le chargement depuis le CDN
-     * avant que notre minuterie de réessai n'abandonne, laissant le LaTeX
-     * brut affiché au lieu d'être rendu, sans aucune erreur visible dans
-     * la console (échec silencieux). Réglable via l'administration du
-     * site (qtype_webwork/mathjaxsource) pour revenir au CDN si l'image du
-     * renderer n'a pas été construite avec MathJax inclus.
-     */
-    protected function get_mathjax_bootstrap(string $serverurl): string {
-        $config = <<<'JS'
-window.MathJax = window.MathJax || {
-    tex2jax: {
-        inlineMath: [['\\(', '\\)']],
-        processEscapes: true
-    },
-    TeX: {
-        // Extensions couramment utilisées dans les problèmes WeBWorK mais
-        // absentes du module combiné "TeX-MML-AM_CHTML" par défaut --
-        // notamment color.js, sans quoi \textcolor{...}{...} s'affichait
-        // tel quel au lieu d'être interprété. noErrors/noUndefined évitent
-        // qu'une commande future non prévue casse tout le rendu (affiche
-        // un espace réservé plutôt que de planter silencieusement).
-        extensions: ['color.js', 'cancel.js', 'enclose.js', 'noErrors.js', 'noUndefined.js']
-    },
-    messageStyle: 'none',
-    menuSettings: {
-        zoom: 'Double-Click',
-        zscale: '300%'
-    }
-};
-JS;
-        $mathjaxsource = get_config('qtype_webwork', 'mathjaxsource') ?: 'local';
-        $mathjaxsrc = $mathjaxsource === 'cdn'
-            ? 'https://cdn.jsdelivr.net/npm/mathjax@2.7.9/MathJax.js?config=TeX-MML-AM_CHTML'
-            : $this->resolve_asset_url($serverurl, 'pg_files/mathjax-v2/MathJax.js?config=TeX-MML-AM_CHTML');
-
-        return html_writer::tag('script', $config)
-            . html_writer::tag('script', '', [
-                'src' => $mathjaxsrc,
-            ])
-            . html_writer::tag('script', self::MATHJAX_TYPESET_TRIGGER);
-    }
-
-    /**
-     * Déclenche explicitement un passage de MathJax sur les problèmes
-     * WeBWorK une fois la page ET MathJax prêts.
-     *
-     * MathJax v2 traite automatiquement la page une seule fois, à son
-     * initialisation. Sur un chargement normal, cela suffit. Mais après
-     * une soumission de réponse (rechargement avec rétroaction), l'ordre
-     * d'arrivée exact du contenu WeBWorK et de l'initialisation de MathJax
-     * varie -- si MathJax termine son passage automatique AVANT que le
-     * contenu ne soit en place, plus rien ne relance le rendu, et le LaTeX
-     * reste affiché brut. C'est une course, d'où le caractère aléatoire du
-     * problème (un rechargement manuel de la page le "réparait" toujours).
-     *
-     * On force donc un passage supplémentaire, avec réessais espacés pour
-     * couvrir les cas où du contenu arrive encore un peu après (ex.
-     * bulles de rétroaction insérées dynamiquement). Un passage de plus
-     * sur du contenu déjà rendu est sans effet (MathJax saute les
-     * éléments déjà traités), donc c'est sans risque.
-     */
-    protected const MATHJAX_TYPESET_TRIGGER = <<<'JS'
-(function() {
-    // Réessais RAPIDES (50 ms) plutôt que lents : on veut déclencher le
-    // rendu dès la milliseconde où MathJax devient disponible, pas
-    // attendre le prochain "tick" d'une minuterie lente. Plafond à ~10 s
-    // au total, mais en pratique on sort de la boucle en quelques
-    // dizaines de millisecondes.
-    var attempts = 0;
-    var maxattempts = 200;
-    function ready() {
-        return window.MathJax && MathJax.Hub && MathJax.Hub.Queue;
-    }
-    function typesetProblems() {
-        var targets = document.querySelectorAll('.webwork-problem');
-        if (!ready() || !targets.length) {
-            if (++attempts < maxattempts) { setTimeout(typesetProblems, 50); }
-            return;
-        }
-        targets.forEach(function(el) {
-            MathJax.Hub.Queue(['Typeset', MathJax.Hub, el]);
-        });
-        // Filet de sécurité : une seule vérification tardive, et
-        // UNIQUEMENT si du LaTeX brut subsiste réellement (contenu arrivé
-        // après notre passage). Évite d'imposer un délai à tout le monde
-        // pour couvrir un cas rare.
-        setTimeout(function() {
-            var leftover = document.querySelectorAll('.webwork-problem script[type^="math/tex"]:not(.qtype-webwork-done)');
-            if (!leftover.length || !ready()) { return; }
-            leftover.forEach(function(s) { s.classList.add('qtype-webwork-done'); });
-            document.querySelectorAll('.webwork-problem').forEach(function(el) {
-                MathJax.Hub.Queue(['Typeset', MathJax.Hub, el]);
-            });
-        }, 1200);
-    }
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', typesetProblems);
-    } else {
-        typesetProblems();
-    }
-})();
-JS;
-
     public function formulation_and_controls(question_attempt $qa, question_display_options $options) {
         $question = $qa->get_question();
         /** @var qtype_webwork_question $question */
 
         $output = html_writer::tag('div', $question->format_questiontext($qa), ['class' => 'qtext']);
 
-        // On charge nous-mêmes MathJax v2 (une seule fois par page, même si
-        // plusieurs questions WeBWorK apparaissent sur la même page) --
-        // entièrement autonome, sans dépendre d'un réglage global du site
-        // (HTML additionnel) qui ne serait pas portable lors du déploiement
-        // du plugin sur une autre installation Moodle. On utilise
-        // volontairement MathJax v2 (pas la v3 fournie par WeBWorK) : dans
-        // ce contexte d'intégration (un fragment de page, pas une page
-        // WeBWorK complète avec sa balise <base>), l'initialisation interne
-        // de MathJax v3 (chargement dynamique de composants) s'est avérée
-        // trop fragile à fiabiliser -- v2 est plus simple et plus tolérant.
-        if (!self::$mathjaxloaded) {
-            self::$mathjaxloaded = true;
-            $output .= $this->get_mathjax_bootstrap($question->serverurl);
-        }
+        // MathJax n'est plus chargé ici : sous Moodle 5, le module AMD
+        // qtype_webwork/question (voir la fin de cette méthode) obtient
+        // MathJax 4 par le chargeur du filtre de Moodle, une seule instance
+        // pour toute la page. Sous Moodle 4.x, le plugin chargeait MathJax
+        // v2 lui-même, ce que le MathJax 4 du filtre de Moodle 5 rendrait
+        // inutilisable (voir classes/mathjax.php).
 
         // Force l'ouverture/fermeture des indices/solutions à fonctionner via
         // la sémantique native <details>/<summary> (gérée par le navigateur
@@ -309,6 +186,7 @@ JS;
             'idmap' => $idmap,
             'serverurl' => $question->serverurl,
             'entryassist' => $question->entryassist,
+            'popovertoggle' => self::POPOVER_TOGGLE_ATTRIBUTE,
         ]);
 
         // Correctifs CSS pour l'éditeur MathQuill dans notre contexte
@@ -325,35 +203,8 @@ JS;
                 . '.mq-edit.qtype-webwork-disabled { pointer-events: none; opacity: .65; }'
             );
 
-            // MathQuill affiche son propre éditeur visuel (span.mq-edit),
-            // indépendant du <input> caché en dessous -- mettre "disabled"
-            // sur ce dernier (voir apply_disable_inputs()) ne bloque donc
-            // plus visuellement/fonctionnellement l'éditeur MathQuill.
-            // N'ayant pas accès à l'API interne de MathQuill pour appeler
-            // sa propre méthode de verrouillage, on grise/bloque par CSS +
-            // attributs génériques dès que son span compagnon apparaît
-            // (créé par mqeditor.js après le chargement -- on réessaie
-            // donc quelques fois, comme pour le rendu MathJax).
-            $output .= html_writer::tag('script',
-                "(function retryLockMathQuill(attemptsleft) {"
-                . "var found = false;"
-                . "document.querySelectorAll('.webwork-problem input[disabled], .webwork-problem textarea[disabled]').forEach(function(inp) {"
-                . "var span = document.getElementById('mq-answer-' + inp.id);"
-                . "if (span) {"
-                . "found = true;"
-                . "span.classList.add('qtype-webwork-disabled');"
-                . "span.setAttribute('tabindex', '-1');"
-                . "span.querySelectorAll('textarea, input').forEach(function(f) {"
-                . "f.setAttribute('disabled', 'disabled');"
-                . "f.setAttribute('tabindex', '-1');"
-                . "});"
-                . "}"
-                . "});"
-                . "if (!found && attemptsleft > 0) {"
-                . "setTimeout(function() { retryLockMathQuill(attemptsleft - 1); }, 250);"
-                . "}"
-                . "})(20);"
-            );
+            // Le verrouillage de l'éditeur MathQuill des champs désactivés
+            // (classe qtype-webwork-disabled) est posé par amd/src/question.js.
         }
 
         // Injection des feuilles de style renvoyées par le renderer, sous
@@ -414,152 +265,34 @@ JS;
             );
         }
 
-        // Scripts requis (JS spécifiques du problème, popovers Bootstrap,
-        // ...), en balises <script> inline plutôt que via
-        // $PAGE->requires->js(), pour la même raison de timing. MathJax v3
-        // de WeBWorK (tex-svg.js/mathjax-config.js) est volontairement
-        // exclu de cette liste (voir response_parser::parse()) -- le plugin
-        // charge sa propre installation de MathJax v2 séparément (voir
-        // get_mathjax_bootstrap()).
+        // Scripts du renderer (MathQuill, MathView, GraphTool, rétroaction...).
+        // Sous Moodle 5, ils ne sont plus émis en balises <script> : le
+        // module AMD qtype_webwork/question les charge APRÈS avoir prêté le
+        // Bootstrap de Moodle à WeBWorK et obtenu MathJax 4 (voir
+        // amd/src/question.js). $PAGE->requires->js_call_amd() reste
+        // utilisable à ce stade de la page, contrairement à ->css()/->js() :
+        // les appels AMD sont émis en pied de page.
+        //
+        // Deux scripts du renderer sont écartés :
+        // - MathJax v3 de WeBWorK (tex-svg.js/mathjax-config.js), déjà retiré
+        //   par response_parser::parse() ;
+        // - bootstrap.bundle : une seconde copie de Bootstrap 5 sur la page
+        //   ferait ouvrir puis refermer aussitôt les menus de Moodle 5.
+        $scripts = [];
         foreach ($render['js'] as $js) {
+            if (preg_match('#/bootstrap\.bundle(\.min)?\.js#i', strtok($js, '?'))) {
+                continue;
+            }
             if (in_array($js, self::$emittedassets, true)) {
                 continue;
             }
             self::$emittedassets[] = $js;
-            $url = $this->resolve_asset_url($question->serverurl, $js);
-            $output .= html_writer::tag('script', '', ['src' => $url]);
+            $scripts[] = $this->resolve_asset_url($question->serverurl, $js);
         }
-
-        // Les bulles de prévisualisation de WeBWorK (icônes vert/rouge,
-        // "Preview of Your Answer") utilisent les popovers Bootstrap, qui ne
-        // s'initialisent pas automatiquement dans notre contexte
-        // d'intégration (contrairement à une page WeBWorK complète, qui a
-        // son propre script d'initialisation). On les active nous-mêmes une
-        // fois le DOM et le script Bootstrap chargés.
-        // On utilise getOrCreateInstance plutôt que "new Popover()" : si
-        // WeBWorK (ou nous-mêmes lors d'un rendu précédent) a déjà créé une
-        // instance sur cet élément, on la réutilise au lieu d'en créer une
-        // deuxième en conflit ; sinon, on en crée une nouvelle -- dans les
-        // deux cas, la bulle s'ouvre correctement.
-        // "sanitize: false" est nécessaire : le nettoyeur HTML intégré de
-        // Bootstrap retire par défaut toute balise <script> du contenu des
-        // popovers (protection anti-XSS générique), ce qui effaçait
-        // entièrement le texte mathématique de WeBWorK
-        // (<script type="math/tex">...</script>) avant même que MathJax
-        // ait la chance de le traiter. Comme ce contenu provient de notre
-        // propre serveur WeBWorK (pas d'une saisie arbitraire d'utilisateur),
-        // désactiver ce nettoyage ici est un compromis raisonnable.
-        if (!self::$popoverscriptoutput) {
-            self::$popoverscriptoutput = true;
-            $output .= html_writer::tag('script',
-                "document.addEventListener('DOMContentLoaded', function() {"
-                . "if (!(window.bootstrap && window.bootstrap.Popover)) { return; }"
-                . "document.querySelectorAll('.webwork-problem [data-bs-toggle=\"popover\"]').forEach(function(original) {"
-                // On clone le déclencheur (l'icône verte/rouge/grise)
-                // lui-même, pas seulement le bouton "X" -- le script propre
-                // à WeBWorK (feedback.*.min.js) initialise sa PROPRE
-                // gestion du popover sur ce même élément (avec, semble-t-il,
-                // une logique basée sur la perte de focus, indépendante de
-                // notre "click"), et cette logique entrait en conflit avec
-                // la nôtre : fermeture correcte au premier clic, puis
-                // réouverture immédiate avec du contenu brut non traité par
-                // MathJax. cloneNode(true) préserve tous les attributs
-                // data-bs-* (contenu, titre) mais aucun écouteur JS -- en
-                // remplaçant l'élément original par son clone AVANT toute
-                // initialisation, on repart d'un élément vierge que seul
-                // notre propre code gère.
-                . "var el = original.cloneNode(true);"
-                . "original.parentNode.replaceChild(el, original);"
-                // On détruit toute instance existante avant d'en recréer une :
-                // une instance déjà créée garderait son ancienne configuration
-                // (notamment "sanitize: true" par défaut).
-                . "var existing = bootstrap.Popover.getInstance(el);"
-                . "if (existing) { existing.dispose(); }"
-                // Trigger par défaut ("click", déjà présent via data-bs-trigger
-                // sur l'élément) : fermeture en recliquant sur l'icône ou via le
-                // bouton "X" natif de WeBWorK (visible depuis qu'on désactive le
-                // nettoyage HTML de Bootstrap ci-dessous).
-                . "var instance = new bootstrap.Popover(el, {sanitize: false});"
-                . "el.addEventListener('shown.bs.popover', function() {"
-                . "var tipId = el.getAttribute('aria-describedby');"
-                . "var tip = tipId ? document.getElementById(tipId) : null;"
-                . "if (!tip) { return; }"
-                // Les navigateurs n'exécutent JAMAIS les balises <script>
-                // insérées via innerHTML (ce que fait Bootstrap pour
-                // afficher le contenu d'un popover) -- une restriction du
-                // DOM, indépendante de Bootstrap ou de notre propre code.
-                // Certaines prévisualisations de réponse (ex. GraphTool,
-                // qui affiche une mini-image statique du graphique tracé)
-                // embarquent un <script> d'initialisation dans le contenu
-                // du popover, qui ne s'exécuterait donc jamais sans ce
-                // correctif. On recrée chaque <script> trouvé (en copiant
-                // son contenu) pour forcer son exécution.
-                . "tip.querySelectorAll('script').forEach(function(oldscript) {"
-                . "var newscript = document.createElement('script');"
-                . "if (oldscript.src) { newscript.src = oldscript.src; }"
-                . "else { newscript.textContent = oldscript.textContent; }"
-                . "oldscript.parentNode.replaceChild(newscript, oldscript);"
-                . "});"
-                // Le bouton "X" fourni par WeBWorK dans le contenu du popover
-                // utilise l'ancien attribut Bootstrap 3/4 "data-dismiss" (ou la
-                // classe "close"), que Bootstrap 5 ne reconnaît plus (renommé
-                // "data-bs-dismiss"). Sans ce correctif, cliquer sur ce bouton
-                // ne fait rien -- il faut recliquer sur l'icône déclencheur
-                // pour fermer. On câble donc nous-mêmes ce bouton vers notre
-                // instance Bootstrap 5.
-                . "var closebtn = tip.querySelector('[data-dismiss=\"popover\"], [data-bs-dismiss=\"popover\"], .close, .btn-close');"
-                . "if (closebtn && !closebtn.dataset.webworkCloseWired) {"
-                // On clone le bouton avant d'y attacher notre gestionnaire :
-                // le contenu du popover provient du HTML brut de WeBWorK, qui
-                // peut déjà avoir câblé son propre gestionnaire sur ce bouton
-                // (via son propre script JS, chargé juste avant). Les deux
-                // gestionnaires se disputaient alors le même clic -- premier
-                // clic : conflit visuel (MathJax cassé), la bulle restait
-                // ouverte ; second clic : notre hide() finissait par
-                // l'emporter. cloneNode(true) copie la structure du bouton
-                // mais JAMAIS ses écouteurs JS -- en le remplaçant par son
-                // clone avant d'attacher notre propre écouteur, on repart
-                // d'un bouton "vierge" sans aucun conflit possible.
-                . "var freshbtn = closebtn.cloneNode(true);"
-                . "freshbtn.dataset.webworkCloseWired = '1';"
-                . "closebtn.parentNode.replaceChild(freshbtn, closebtn);"
-                . "freshbtn.addEventListener('click', function(e) {"
-                . "e.preventDefault();"
-                . "e.stopPropagation();"
-                . "instance.hide();"
-                // Le focus qui revient sur l'icône déclencheuse après la
-                // fermeture peut réactiver un système d'affichage distinct
-                // du nôtre, propre au script JS de WeBWorK (feedback.js),
-                // configuré en déclenchement focus/hover -- invisible et
-                // non désactivable depuis notre code (module JS séparé).
-                // On retire donc explicitement le focus, immédiatement ET
-                // après un court délai (si Bootstrap le restaure lui-même
-                // une fois sa transition de fermeture terminée), pour
-                // empêcher toute réouverture accidentelle avec du contenu
-                // brut pas encore traité par MathJax.
-                . "if (document.activeElement && document.activeElement.blur) { document.activeElement.blur(); }"
-                . "el.blur();"
-                . "setTimeout(function() { el.blur(); }, 300);"
-                . "});"
-                . "}"
-            // La prévisualisation contient des délimiteurs \(...\) -- on
-            // s'appuie sur MathJax v2 (chargé par le plugin, voir
-            // get_mathjax_bootstrap()) et son API Hub.Queue. MathJax v2 peut
-            // ne pas avoir terminé son propre chargement asynchrone au tout
-            // premier clic -- on réessaie automatiquement pendant quelques
-            // secondes plutôt que d'échouer silencieusement une seule fois.
-                . "(function typesetWhenReady(attemptsleft) {"
-                . "if (window.MathJax && window.MathJax.Hub && window.MathJax.Hub.Queue) {"
-                . "MathJax.Hub.Queue(['Typeset', MathJax.Hub, tip]);"
-                . "} else if (attemptsleft > 0) {"
-                . "setTimeout(function() { typesetWhenReady(attemptsleft - 1); }, 50);"
-                . "}"
-                . "})(200);"
-                . "});"
-                . "});"
-                . "});"
-            );
-        }
+        $this->page->requires->js_call_amd('qtype_webwork/question', 'init', [[
+            'scripts' => $scripts,
+            'mathjax' => \qtype_webwork\mathjax::loader_params($question->serverurl),
+        ]]);
 
         return $output;
     }

@@ -22,6 +22,14 @@ require_once __DIR__ . '/../../classes/response_parser.php';
 
 use qtype_webwork\response_parser;
 
+// Substitut de la fonction de Moodle : strip_correctness() remplace le titre
+// des bulles de prévisualisation par une chaîne de langue.
+if (!function_exists('get_string')) {
+    function get_string(string $identifier, string $component = '', $a = null): string {
+        return '[' . $identifier . ']';
+    }
+}
+
 $failures = 0;
 $total = 0;
 
@@ -163,6 +171,22 @@ check_true('le champ texte est désactivé', strpos($disabled, 'disabled') !== f
     && strpos($disabled, 'name="AnSwEr0001"') !== false);
 check_true('le champ caché n\'est pas désactivé inutilement',
     substr_count($disabled, 'disabled') === 1);
+
+// --- transform() : attribut des bulles (Moodle 5.x) -------------------------
+echo "\n-- transform() / popovertoggle --\n";
+$button = '<button class="ww-feedback-btn" data-bs-toggle="popover" data-bs-content="x">i</button>'
+    . '<a data-bs-toggle="collapse" href="#c">c</a>';
+$renamedtoggle = response_parser::transform($button, ['popovertoggle' => 'data-qtype-webwork-toggle']);
+check_true('data-bs-toggle="popover" retiré (le thème Boost de Moodle 5 ne s\'en empare plus)',
+    strpos($renamedtoggle, 'data-bs-toggle="popover"') === false);
+check_true('remplacé par data-qtype-webwork-toggle="popover"',
+    strpos($renamedtoggle, 'data-qtype-webwork-toggle="popover"') !== false);
+check_true('le contenu de la bulle (data-bs-content) est conservé',
+    strpos($renamedtoggle, 'data-bs-content="x"') !== false);
+check_true('les autres data-bs-toggle (collapse) ne sont pas touchés',
+    strpos($renamedtoggle, 'data-bs-toggle="collapse"') !== false);
+check_true('sans l\'option, data-bs-toggle="popover" est laissé tel quel (Moodle 4.x, aperçu en iframe)',
+    strpos(response_parser::transform($button, []), 'data-bs-toggle="popover"') !== false);
 
 // --- Résumé ---------------------------------------------------------------
 echo "\n=== Résumé : " . ($total - $failures) . "/$total tests réussis ===\n";

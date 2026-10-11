@@ -1,0 +1,121 @@
+<?php
+namespace qtype_webwork;
+
+defined('MOODLE_INTERNAL') || die();
+
+/**
+ * Adresse et configuration de MathJax 4 pour Moodle 5.x.
+ *
+ * Sous Moodle 4.x, le filtre MathJax de Moodle et le plugin utilisaient
+ * tous deux MathJax v2 et partageaient le même objet global. Depuis Moodle
+ * 5.0, le filtre charge MathJax 4 (4.1.3 dans Moodle 5.3) et remplace
+ * window.MathJax par sa propre configuration : un MathJax v2 chargé à côté
+ * par le plugin serait écrasé. Deux versions de MathJax ne peuvent pas
+ * cohabiter sur une même page -- elles se disputent le même nom global.
+ *
+ * Le plugin passe donc par le chargeur du filtre (filter_mathjaxloader/loader,
+ * voir amd/src/question.js) : UNE seule instance de MathJax 4 par page,
+ * partagée avec les formules de Moodle. Cette classe calcule ce qu'on lui
+ * transmet.
+ */
+class mathjax {
+
+    /** Adresse par défaut du filtre de Moodle 5.3, si l'administrateur ne l'a pas changée. */
+    const DEFAULT_CDN_URL = 'https://cdn.jsdelivr.net/npm/mathjax@4.1.3/tex-mml-chtml.js';
+
+    /**
+     * Adresse du script MathJax 4.
+     *
+     * - « local » (défaut) : la copie de MathJax 4 servie par le renderer
+     *   (Dockerfile.intl, pg_files/mathjax-v4/). On prend la sortie SVG :
+     *   ses glyphes arrivent sous forme de scripts, alors que la sortie
+     *   CHTML charge des polices web, que le navigateur refuse de charger
+     *   depuis une autre origine sans en-têtes CORS -- et le renderer n'en
+     *   envoie pas par défaut. C'est aussi la sortie qu'utilise WeBWorK.
+     * - « cdn » : l'adresse configurée dans le filtre MathJax de Moodle.
+     */
+    public static function url(string $serverurl): string {
+        if (self::is_local()) {
+            return rtrim($serverurl, '/') . '/pg_files/mathjax-v4/tex-mml-svg.js';
+        }
+        $url = get_config('filter_mathjaxloader', 'httpsurl');
+        return !empty($url) ? $url : self::DEFAULT_CDN_URL;
+    }
+
+    /**
+     * Configuration MathJax : celle du filtre de Moodle (pour ne rien
+     * changer au rendu des formules de Moodle sur la même page), complétée
+     * de ce dont les problèmes WeBWorK ont besoin.
+     */
+    public static function config(string $serverurl): array {
+        $config = [];
+        $filterconfig = (string) get_config('filter_mathjaxloader', 'mathjaxconfig');
+        if (trim($filterconfig) !== '') {
+            $wwwroot = (new \moodle_url('/'))->out(true);
+            $decoded = json_decode(str_replace('{wwwroot}', $wwwroot, $filterconfig), true);
+            if (is_array($decoded)) {
+                $config = $decoded;
+            }
+        }
+
+        // Délimiteurs produits par PG (et par response_parser pour les
+        // bulles de prévisualisation). C'est le défaut de MathJax 4 ; on ne
+        // le pose que si l'administrateur n'a rien configuré, pour ne pas
+        // retirer ses propres délimiteurs.
+        if (!isset($config['tex']['inlineMath'])) {
+            $config['tex']['inlineMath'] = [['\\(', '\\)']];
+        }
+        // Zoom au double-clic, comme sous MathJax v2 avec le plugin 4.x.
+        if (!isset($config['options']['menuOptions']['settings']['zoom'])) {
+            $config['options']['menuOptions']['settings']['zoom'] = 'DoubleClick';
+        }
+        // Les polices de MathJax 4 sont un paquet séparé, cherché par défaut
+        // sur cdn.jsdelivr.net : en mode local, on pointe vers la copie
+        // installée à côté de MathJax sur le renderer.
+        if (self::is_local()) {
+            $config['loader']['paths']['fonts'] = rtrim($serverurl, '/') . '/pg_files/mathjax-v4/fonts';
+
+            // La synthèse vocale de MathJax 4 (speech-rule-engine) charge ses
+            // dictionnaires (sre/mathmaps/*.json) par fetch() : d'une origine
+            // à l'autre, le navigateur exige un en-tête CORS, que le renderer
+            // n'envoie pas par défaut. Sans lui, la requête échoue et MathJax
+            // ne rend plus AUCUNE formule (vérifié avec MathJax 4.1.3 :
+            // typesetPromise ne se résout jamais). Tant que l'administrateur
+            // n'a pas indiqué que le renderer envoie ces en-têtes, on
+            // désactive l'enrichissement sémantique (qui déclenche ce
+            // chargement) et on active le MathML d'assistance, que les
+            // lecteurs d'écran lisent directement.
+            if (!get_config('qtype_webwork', 'renderercors')) {
+                if (!isset($config['options']['menuOptions']['settings']['enrich'])) {
+                    $config['options']['menuOptions']['settings']['enrich'] = false;
+                }
+                if (!isset($config['options']['menuOptions']['settings']['assistiveMml'])) {
+                    $config['options']['menuOptions']['settings']['assistiveMml'] = true;
+                }
+            }
+        }
+        return $config;
+    }
+
+    /**
+     * Paramètres attendus par filter_mathjaxloader/loader::configure().
+     */
+    public static function loader_params(string $serverurl): array {
+        return [
+            'mathjaxurl' => self::url($serverurl),
+            'mathjaxconfig' => json_encode(self::config($serverurl)),
+            'lang' => self::language(),
+        ];
+    }
+
+    /**
+     * Langue de l'interface de MathJax (menu contextuel) : « fr_ca » → « fr ».
+     */
+    public static function language(): string {
+        return explode('_', current_language())[0];
+    }
+
+    protected static function is_local(): bool {
+        return (get_config('qtype_webwork', 'mathjaxsource') ?: 'local') === 'local';
+    }
+}

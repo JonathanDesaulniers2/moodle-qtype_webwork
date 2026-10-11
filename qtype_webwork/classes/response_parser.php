@@ -161,6 +161,7 @@ class response_parser {
      *   'idmap' => [ancien nom => nouvel id, ...] (voir apply_rename_fields -- cas spécial MathQuill)
      *   'serverurl' => string (voir apply_resolve_image_urls -- images TikZ/graphiques générées dynamiquement)
      *   'entryassist' => string (voir apply_mark_foreign_entryassist -- MathQuill/MathView/None de cette question)
+     *   'popovertoggle' => string (voir apply_rename_popover_toggle -- Moodle 5.x)
      */
     public static function transform(string $html, array $ops): string {
         // WeBWorK code en dur le texte "Hint" ; simple remplacement de texte,
@@ -210,7 +211,37 @@ class response_parser {
         // Answer" (texte codé en dur par WeBWorK) en français.
         self::apply_fix_popover_content($xpath);
 
+        if (!empty($ops['popovertoggle'])) {
+            self::apply_rename_popover_toggle($xpath, (string) $ops['popovertoggle']);
+        }
+
         return self::serialize_children($dom);
+    }
+
+    /**
+     * Remplace data-bs-toggle="popover" par un attribut propre au plugin.
+     *
+     * Depuis Moodle 5.0 (Bootstrap 5), le thème Boost initialise lui-même
+     * TOUS les [data-bs-toggle="popover"] de la page au chargement
+     * (déclenchement au focus, contenu assaini) et rouvre, depuis un
+     * écouteur de clic posé sur le document, toute bulle dont l'icône est
+     * cliquée. Sous Moodle 4.x, il ne visait que l'ancien data-toggle, et
+     * les icônes de rétroaction de WeBWorK lui échappaient. Laissé tel
+     * quel, l'attribut ferait gérer chaque bulle WeBWorK à la fois par
+     * Moodle et par le plugin : contenu mathématique effacé par
+     * l'assainissement, et bulle impossible à refermer en recliquant sur
+     * l'icône (Moodle la rouvre aussitôt).
+     *
+     * Bootstrap n'a pas besoin de data-bs-toggle pour créer un popover : le
+     * contenu, le titre et le déclenchement restent lus dans les autres
+     * data-bs-*, et feedback.js retrouve ses boutons par leur classe
+     * (.ww-feedback-btn), pas par cet attribut.
+     */
+    protected static function apply_rename_popover_toggle(\DOMXPath $xpath, string $attribute): void {
+        foreach (iterator_to_array($xpath->query('//*[@data-bs-toggle="popover"]')) as $node) {
+            $node->removeAttribute('data-bs-toggle');
+            $node->setAttribute($attribute, 'popover');
+        }
     }
 
     protected static function apply_fix_popover_content(\DOMXPath $xpath): void {

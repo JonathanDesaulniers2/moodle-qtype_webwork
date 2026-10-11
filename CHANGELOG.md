@@ -1,5 +1,50 @@
 # Journal des modifications
 
+## 2026101100 — version Moodle 5.3 (`v2.0-moodle53-beta`, branche `MOODLE_503_STABLE`)
+
+Les trois plugins passent à `requires = 2026100500` (Moodle 5.3). Aucun changement de base de
+données ; les API PHP utilisées (moteur de question, comportements, banque de questions) sont
+identiques entre 4.5 et 5.3 — vérifié sur le code source des deux versions. Tout ce qui change
+se passe dans le navigateur :
+
+- **MathJax 4** — le filtre MathJax de Moodle 5 charge MathJax 4 et remplace `window.MathJax` par
+  sa propre configuration : le MathJax v2 que le plugin chargeait sous 4.x aurait été écrasé.
+  Le plugin obtient désormais MathJax par le chargeur du filtre (`filter_mathjaxloader/loader`),
+  une seule instance par page, partagée avec les formules de Moodle (`classes/mathjax.php`).
+  « Hébergé localement » désigne la copie du renderer (`pg_files/mathjax-v4/`, image v1.1+), en
+  **sortie SVG** : ses glyphes arrivent en scripts, sans polices web que le navigateur refuserait
+  de charger d'une autre origine sans CORS.
+- **Synthèse vocale de MathJax et CORS** — essai réel (Edge, MathJax 4.1.3, renderer simulé sur
+  une autre origine) : les dictionnaires de la synthèse vocale sont chargés par `fetch()`, bloqué
+  sans en-tête CORS, et ce blocage empêche le rendu de **toutes** les formules. Nouveau réglage
+  `renderercors` (décoché par défaut) : décoché, l'enrichissement sémantique est désactivé et le
+  MathML d'assistance activé à la place (lu directement par les lecteurs d'écran) ; coché,
+  MathJax garde son accessibilité complète.
+- **Bootstrap 5 partagé** — Moodle 5 utilise lui aussi Bootstrap 5 : la copie du renderer
+  (`bootstrap.bundle`) n'est plus chargée dans les pages de Moodle, où deux copies traiteraient
+  chacune les clics sur les `data-bs-toggle` (menus ouverts puis refermés aussitôt). Celle de
+  Moodle est prêtée aux scripts de WeBWorK (`window.bootstrap`).
+- **Bulles de rétroaction** — le thème Boost de Moodle 5 initialise lui-même tout
+  `[data-bs-toggle="popover"]` (déclenchement au focus, contenu assaini) et rouvre une bulle
+  cliquée depuis un écouteur global. `response_parser` remplace cet attribut par
+  `data-qtype-webwork-toggle` sur les icônes de WeBWorK (option `popovertoggle`), qui restent
+  gérées par le plugin seul, comme en 4.5.
+- **Module AMD `qtype_webwork/question`** — remplace les scripts en ligne de 4.x (popovers,
+  verrouillage de MathQuill, déclenchement de MathJax). Il charge les scripts du renderer dans
+  l'ordre (`async = false`) après MathJax : les correctifs `patch_mathview.pl` /
+  `patch_graphtool.pl` testent `MathJax.startup` dès leur exécution.
+- **Aperçu en iframe** (`ajax/preview.php`) — MathJax 4 aussi, même configuration.
+- **Banques de questions** (`import.php`) — depuis Moodle 5.0, une banque est une activité
+  (`cmid`) ; une adresse ne portant que `courseid` mène à la gestion des banques du cours, comme
+  dans le noyau.
+- Classes Bootstrap 4 restantes (`ml-2`, `mr-2`) remplacées par leurs équivalents Bootstrap 5.
+- Tests autonomes : substitut de `get_string()` (les tests s'arrêtaient sur `strip_correctness()`
+  depuis la version 2026072842) et cinq tests de l'option `popovertoggle`.
+
+**Limites connues** : non validée sur une vraie instance Moodle 5.3 (d'où l'étiquette bêta) ;
+le support des applets (`ww_applet_support.js`, qui attend `DOMContentLoaded`) ne s'initialise
+pas, les scripts de WeBWorK étant chargés après la page.
+
 ## qtype_webwork + qbank_webworkimport 2026072850 (aperçu dans la banque de questions)
 
 Nouvelle colonne **« Aperçu WeBWorK »** dans la banque de questions : les questions WeBWorK ont un

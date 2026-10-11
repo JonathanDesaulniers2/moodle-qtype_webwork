@@ -685,4 +685,15 @@ function xmldb_qtype_webwork_upgrade($oldversion) {
         // la banque de questions.
         upgrade_plugin_savepoint(true, 2026072850, 'qtype', 'webwork');
     }
+
+    if ($oldversion < 2026101100) {
+        // Pas de changement de schéma -- version Moodle 5.3 : MathJax 4
+        // obtenu par le chargeur du filtre MathJax de Moodle (une seule
+        // instance par page), Bootstrap 5 de Moodle prêté aux scripts de
+        // WeBWorK au lieu de la copie du renderer, scripts chargés par le
+        // module AMD qtype_webwork/question. Le réglage mathjaxsource
+        // garde ses valeurs (local / cdn) ; « local » désigne désormais
+        // pg_files/mathjax-v4/ sur le renderer (image v1.1 ou plus).
+        upgrade_plugin_savepoint(true, 2026101100, 'qtype', 'webwork');
+    }
 }

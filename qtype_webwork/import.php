@@ -27,16 +27,22 @@ $confirmed = optional_param('confirmed', 0, PARAM_BOOL);
 $courseid = optional_param('courseid', 0, PARAM_INT);
 $cmid = optional_param('cmid', 0, PARAM_INT);
 
+// Depuis Moodle 5.0, il n'y a plus de banque de questions au niveau du
+// cours : chaque banque est une activité (mod_qbank, ou la banque propre à
+// un test), toujours désignée par cmid. Une ancienne adresse ne portant que
+// courseid mène donc, comme dans le noyau (question/edit.php), à la page de
+// gestion des banques du cours.
+if ($categoryid <= 0 && !$cmid && $courseid) {
+    require_login($courseid);
+    redirect(new moodle_url('/question/banks.php', ['courseid' => $courseid]));
+}
+
 // Dernier repli : arrivé depuis l'onglet de la banque de questions sans
 // catégorie explicite, on prend la catégorie par défaut du contexte
 // (comportement des pages natives d'importation/exportation de Moodle).
-if ($categoryid <= 0 && ($cmid || $courseid)) {
+if ($categoryid <= 0 && $cmid) {
     require_login();
-    if ($cmid) {
-        $fallbackcontext = context_module::instance($cmid);
-    } else {
-        $fallbackcontext = context_course::instance($courseid);
-    }
+    $fallbackcontext = context_module::instance($cmid);
     $defaultcategory = $DB->get_record_select('question_categories',
         'contextid = :contextid AND parent = 0',
         ['contextid' => $fallbackcontext->id], '*', IGNORE_MULTIPLE);
@@ -97,12 +103,17 @@ $PAGE->set_pagelayout('admin');
 $PAGE->set_title(get_string('importtitle', 'qtype_webwork'));
 $PAGE->set_heading(get_string('importtitle', 'qtype_webwork'));
 
-// Retour vers la banque de questions d'origine.
-$returnurl = new moodle_url('/question/edit.php', ['cat' => $categoryid . ',' . $category->contextid]);
+// Retour vers la banque de questions d'origine. Sous Moodle 5, une banque
+// est toujours une activité : sans cmid (catégorie orpheline, cas
+// anormal), on revient à la gestion des banques du cours plutôt que vers
+// question/edit.php?courseid=..., que le noyau redirige de toute façon.
 if ($cmid) {
-    $returnurl->param('cmid', $cmid);
-} else if ($courseid) {
-    $returnurl->param('courseid', $courseid);
+    $returnurl = new moodle_url('/question/edit.php', [
+        'cat' => $categoryid . ',' . $category->contextid,
+        'cmid' => $cmid,
+    ]);
+} else {
+    $returnurl = new moodle_url('/question/banks.php', ['courseid' => $courseid]);
 }
 
 $serverurl = get_config('qtype_webwork', 'serverurl');
