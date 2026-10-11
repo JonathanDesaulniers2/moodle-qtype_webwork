@@ -5,10 +5,11 @@ Trois plugins à installer ensemble :
 - **`qtype_webwork`** — le type de question lui-même (formulaire, rendu, navigateur de
   bibliothèque, fenêtre d'édition intégrée, importation en lot).
 - **`qbehaviour_webwork`** — le comportement de notation associé (modes différé et interactif).
-- **`qbank_webworkimport`** — ajoute l'onglet « Importer WeBWorK » à la banque de questions.
-  Moodle 4.x réserve l'extension de la banque de questions aux plugins de type `qbank` : ce petit
-  plugin compagnon n'est qu'un point d'entrée officiel vers l'importation fournie par
-  `qtype_webwork`. Sans lui, l'importation reste accessible par URL directe.
+- **`qbank_webworkimport`** — ajoute à la banque de questions l'onglet « Importer WeBWorK » et la
+  colonne « Aperçu WeBWorK ». Moodle 4.x réserve l'extension de la banque de questions aux plugins
+  de type `qbank` : ce plugin compagnon est le point d'entrée officiel vers les fonctions fournies
+  par `qtype_webwork`. Sans lui, l'importation reste accessible par URL directe, mais la colonne
+  d'aperçu n'est pas disponible.
 
 **Compatibilité** : Moodle 4.5 (testé sur 4.5.1+). Une version pour Moodle 5.3 est prévue.
 
@@ -130,6 +131,41 @@ réellement la question pour cet étudiant :
 
 Le nombre maximal de tentatives s'applique donc toujours, indépendamment de la rétroaction :
 c'est une contrainte mécanique, et l'étudiant en est toujours averti.
+
+## Aperçu dans la banque de questions
+
+Les questions WeBWorK ont un champ « texte de la question » **vide** — leur énoncé vit dans le
+fichier `.pg`, sur le renderer. La colonne native « Texte de la question » n'affiche donc rien
+pour elles, ce qui rend difficile de repérer la bonne question dans une longue liste.
+
+Le plugin `qbank_webworkimport` ajoute une colonne **« Aperçu WeBWorK »** : un lien
+« Afficher l'aperçu » sous chaque question WeBWorK, qui déplie le problème rendu, avec
+formules, graphiques, indices et solutions fonctionnels.
+
+**Chargement à la demande** : l'aperçu ne se charge qu'au clic, question par question. Charger
+d'emblée l'aperçu de toute une catégorie exigerait un appel au renderer *par question* à chaque
+affichage de la page — plusieurs dizaines de secondes sur une grosse catégorie, et autant de
+charge inutile. Rien n'est mis en cache côté navigateur : chaque ouverture reflète l'état réel du
+fichier `.pg`.
+
+**Pourquoi une iframe** : un problème WeBWorK ne se résume pas à du HTML, il s'accompagne de
+feuilles de style et de scripts (MathJax, GraphTool, MathView, accordéon des indices). Les
+charger dans la page de la banque entrerait en conflit avec ceux de Moodle et serait redondant
+pour chaque aperçu ouvert. L'iframe isole complètement chaque aperçu.
+
+Deux réglages, dans *Administration du site → Plugins → Banque de questions → WeBWorK —
+importation et aperçu* :
+
+| Réglage | Défaut | Effet |
+|---|---|---|
+| Hauteur de l'aperçu | 350 px | Hauteur fixe, le contenu plus long défile à l'intérieur |
+| Largeur de l'aperçu | 500 px | Largeur de la fenêtre, qui déborde volontairement de sa colonne |
+
+La hauteur est **fixe** volontairement : un redimensionnement automatique ferait sauter les lignes
+de la banque à chaque rendu de formule, et laisserait un grand vide après avoir replié une
+solution. De même, la fenêtre **déborde** de sa colonne plutôt que de l'élargir : élargir la
+colonne repousserait toutes les suivantes loin vers la droite pour rien, leur contenu tenant sur
+une seule ligne. Un dégagement de 50 px au-dessus garantit que la fenêtre passe bien sous elles.
 
 ## Informations de débogage (enseignants)
 
@@ -273,8 +309,10 @@ qbehaviour_webwork/
 
 qbank_webworkimport/     (→ question/bank/webworkimport/)
 ├── classes/
-│   ├── navigation.php       l'onglet lui-même
-│   └── plugin_feature.php   déclaration à Moodle
+│   ├── navigation.php              l'onglet « Importer WeBWorK »
+│   ├── webwork_preview_column.php  la colonne « Aperçu WeBWorK »
+│   └── plugin_feature.php          déclaration des deux à Moodle
 ├── lang/en/
+├── settings.php         dimensions de l'aperçu
 └── version.php
 ```

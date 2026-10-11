@@ -1,5 +1,24 @@
 # Journal des modifications
 
+## qtype_webwork + qbank_webworkimport 2026072850 (aperçu dans la banque de questions)
+
+Nouvelle colonne **« Aperçu WeBWorK »** dans la banque de questions : les questions WeBWorK ont un
+champ « texte de la question » vide (leur énoncé vit dans le `.pg`), la colonne native n'affichait
+donc rien pour elles.
+
+- **Chargement à la demande**, question par question : charger d'emblée toute une catégorie
+  exigerait un appel au renderer par question à chaque affichage de page. Rien n'est mis en cache,
+  chaque ouverture reflète l'état réel du fichier `.pg`.
+- **Rendu en iframe** : un problème WeBWorK s'accompagne de feuilles de style et de scripts
+  (MathJax, GraphTool, MathView, accordéon des indices). Un premier essai injectait le seul HTML
+  dans la page — résultat inerte : formules non rendues, indices sans effet au clic, GraphTool
+  absent. L'iframe isole chaque aperçu et charge ses propres ressources, sans conflit avec celles
+  de Moodle.
+- **Dimensions réglables** par l'administrateur (hauteur 350 px, largeur 500 px par défaut). La
+  hauteur est fixe et la fenêtre déborde de sa colonne — deux choix délibérés, expliqués dans le
+  README : le redimensionnement automatique faisait sauter les lignes et laissait un vide après
+  avoir replié une solution ; élargir la colonne repousserait toutes les suivantes pour rien.
+
 ## qtype_webwork 2026072842-2026072843 + qbehaviour_webwork 2026072842
 
 - **Correctif de fuite d'information (mode différé)** — l'icône de rétroaction était bien

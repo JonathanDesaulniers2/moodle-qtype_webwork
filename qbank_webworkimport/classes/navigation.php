@@ -24,7 +24,7 @@ class navigation extends navigation_node_base {
      * Nom affiché sur l'onglet.
      */
     public function get_navigation_title(): string {
-        return get_string('pluginname', 'qbank_webworkimport');
+        return get_string('webworkimport', 'qbank_webworkimport');
     }
 
     /**

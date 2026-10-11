@@ -234,11 +234,19 @@ class qbehaviour_webwork extends question_behaviour_with_save {
         }
 
         // Les options de relecture de Moodle sont un champ de bits ; le bloc
-        // « pendant la tentative » correspond au masque DURING défini par
-        // mod_quiz\question\display_options.
-        $during = defined('\mod_quiz\question\display_options::DURING')
-            ? \mod_quiz\question\display_options::DURING
-            : 0x10000;
+        // « pendant la tentative » correspond au masque DURING.
+        //
+        // La classe qui le définit a changé de nom au fil des versions
+        // (mod_quiz_display_options avant l'espace de noms, puis
+        // \mod_quiz\question\display_options) : on essaie les deux avant
+        // de se rabattre sur la valeur littérale, qui n'a jamais changé.
+        if (defined('\mod_quiz\question\display_options::DURING')) {
+            $during = \mod_quiz\question\display_options::DURING;
+        } else if (defined('mod_quiz_display_options::DURING')) {
+            $during = constant('mod_quiz_display_options::DURING');
+        } else {
+            $during = 0x10000;
+        }
 
         return (bool) ($quiz->reviewgeneralfeedback & $during);
     }
