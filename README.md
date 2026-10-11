@@ -24,6 +24,9 @@ de s'installer (`requires`) ou ne fonctionnera pas correctement.
 Les releases « bêta » sont publiées comme *pre-release* sur GitHub : téléchargeables, mais à
 essayer d'abord sur une instance de test.
 
+Une présentation (fonctionnement et guide d'installation pas à pas) est disponible :
+[`docs/qtype_webwork_presentation.pptx`](docs/qtype_webwork_presentation.pptx).
+
 ### Ce qui change avec Moodle 5.3
 
 Les fonctionnalités sont les mêmes qu'en 4.5. Ce qui change est invisible pour l'enseignant :
