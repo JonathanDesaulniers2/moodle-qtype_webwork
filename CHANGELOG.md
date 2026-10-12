@@ -45,6 +45,11 @@ avec des problèmes réels de `private/` et de `Library/`.
   polices woff2) au lieu du SVG, plus pâle et un peu flou à la taille du texte. Retenue
   seulement si la vérification CORS du module AMD réussit (les polices l'exigent) ; sinon repli
   sur le SVG, comme avant.
+- **Aperçu vide dans l'éditeur MathView** — en mode PGML (celui de PG), MathView écrit l'aperçu
+  sous ses boutons en AsciiMath, entre accents graves. Le plugin 4.x chargeait
+  `TeX-MML-AM_CHTML` (« AM » = AsciiMath) ; les composants `tex-mml-*` de MathJax 4 n'incluent
+  pas cette entrée. `input/asciimath` est maintenant chargé, avec les accents graves pour
+  délimiteurs (sauf configuration contraire du filtre MathJax).
 - 12 tests autonomes ajoutés (58/58).
 
 ## 2026101100 — version Moodle 5.3 (`v2.0-moodle53-beta`, branche `MOODLE_503_STABLE`)

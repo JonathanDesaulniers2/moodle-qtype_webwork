@@ -79,6 +79,19 @@ class mathjax {
         if (!isset($config['tex']['inlineMath'])) {
             $config['tex']['inlineMath'] = [['\\(', '\\)']];
         }
+        // Entrée AsciiMath, comme le « AM » de TeX-MML-AM_CHTML chargé par le
+        // plugin 4.x : l'aperçu de l'éditeur MathView (mode PGML, celui de
+        // PG) écrit l'expression entre accents graves (`x^2`), en AsciiMath.
+        // Les composants tex-mml-* de MathJax 4 n'incluent pas cette entrée :
+        // sans elle, l'aperçu sous les boutons de MathView restait vide.
+        $load = $config['loader']['load'] ?? [];
+        if (!in_array('input/asciimath', $load, true)) {
+            $load[] = 'input/asciimath';
+            $config['loader']['load'] = $load;
+        }
+        if (!isset($config['asciimath']['delimiters'])) {
+            $config['asciimath']['delimiters'] = [['`', '`']];
+        }
         // Zoom au double-clic, comme sous MathJax v2 avec le plugin 4.x
         // (menuSettings: {zoom: 'Double-Click'}). MathJax 4 exige en plus,
         // par défaut, la touche Alt pendant le double-clic (alt: true) :
