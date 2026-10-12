@@ -77,6 +77,11 @@ HTTPS et expose deux routes de navigation en lecture seule (bibliothèque libre 
 :443 {
     tls /etc/caddy/webwork.crt /etc/caddy/webwork.key
 
+    # Les correctifs du renderer gardent le nom des fichiers JS (ex.
+    # mathview.91ad44d1.min.js) : sans cet en-tête, un navigateur peut
+    # garder l'ancienne version des heures après une reconstruction.
+    header /pg_files/* Cache-Control no-cache
+
     handle_path /library-browse/* {
         root * /srv/library
         file_server browse
