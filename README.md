@@ -328,3 +328,18 @@ qbank_webworkimport/     (→ question/bank/webworkimport/)
 ├── settings.php         dimensions de l'aperçu
 └── version.php
 ```
+
+## Auteur et licences
+
+**Développé par Jonathan Desaulniers.**
+
+Claude Code d'Anthropic a été utilisé dans la programmation du plugin.
+
+- **Code** des plugins (`qtype_webwork`, `qbehaviour_webwork`, `qbank_webworkimport`) : GNU
+  General Public License v3.0 ou ultérieure (GPL-3.0-or-later) — voir [`LICENSE`](LICENSE).
+  C'est la licence exigée par Moodle pour ses plugins, qui étendent le code GPL de Moodle.
+- **Documentation** (ce README, `CHANGELOG.md`, les README des plugins) : Creative Commons
+  Attribution - Partage dans les mêmes conditions 4.0 International
+  ([CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/deed.fr)) — voir
+  [`LICENSE-DOCS.md`](LICENSE-DOCS.md).
+
