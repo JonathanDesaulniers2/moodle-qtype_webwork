@@ -24,14 +24,14 @@ class mathjax {
     const DEFAULT_CDN_URL = 'https://cdn.jsdelivr.net/npm/mathjax@4.1.3/tex-mml-chtml.js';
 
     /**
-     * Adresse du script MathJax 4.
+     * Adresse du script MathJax 4, version de repli.
      *
      * - « local » (défaut) : la copie de MathJax 4 servie par le renderer
-     *   (Dockerfile.intl, pg_files/mathjax-v4/). On prend la sortie SVG :
-     *   ses glyphes arrivent sous forme de scripts, alors que la sortie
-     *   CHTML charge des polices web, que le navigateur refuse de charger
-     *   depuis une autre origine sans en-têtes CORS -- et le renderer n'en
-     *   envoie pas par défaut. C'est aussi la sortie qu'utilise WeBWorK.
+     *   (Dockerfile.intl, pg_files/mathjax-v4/), en sortie SVG : ses glyphes
+     *   arrivent sous forme de scripts, sans police web. C'est la seule
+     *   sortie qui fonctionne quand le renderer n'envoie pas d'en-tête CORS
+     *   (le navigateur refuse alors les polices d'une autre origine). Quand
+     *   CORS est présent, le module AMD prend chtml_url() à la place.
      * - « cdn » : l'adresse configurée dans le filtre MathJax de Moodle.
      */
     public static function url(string $serverurl): string {
@@ -40,6 +40,20 @@ class mathjax {
         }
         $url = get_config('filter_mathjaxloader', 'httpsurl');
         return !empty($url) ? $url : self::DEFAULT_CDN_URL;
+    }
+
+    /**
+     * Adresse de la sortie CHTML de la copie locale (vide hors mode local).
+     *
+     * Rendu nettement plus propre que le SVG : vraies polices (woff2,
+     * pg_files/mathjax-v4/fonts/), crénage et lissage du navigateur, traits
+     * plus nets à la taille du texte -- le SVG donnait des expressions
+     * pâles et un peu floues. Exige l'en-tête CORS sur les polices ; le
+     * module AMD ne la retient que si la vérification CORS réussit
+     * (probe_url(), même serveur, même en-tête).
+     */
+    public static function chtml_url(string $serverurl): string {
+        return self::is_local() ? rtrim($serverurl, '/') . '/pg_files/mathjax-v4/tex-mml-chtml.js' : '';
     }
 
     /**
@@ -65,9 +79,17 @@ class mathjax {
         if (!isset($config['tex']['inlineMath'])) {
             $config['tex']['inlineMath'] = [['\\(', '\\)']];
         }
-        // Zoom au double-clic, comme sous MathJax v2 avec le plugin 4.x.
-        if (!isset($config['options']['menuOptions']['settings']['zoom'])) {
-            $config['options']['menuOptions']['settings']['zoom'] = 'DoubleClick';
+        // Zoom au double-clic, comme sous MathJax v2 avec le plugin 4.x
+        // (menuSettings: {zoom: 'Double-Click'}). MathJax 4 exige en plus,
+        // par défaut, la touche Alt pendant le double-clic (alt: true) :
+        // sans rien d'autre, le double-clic seul ne zoomait plus. Aucune
+        // touche requise, comme sous MathJax v2 -- sauf réglage contraire
+        // de l'administrateur dans le filtre MathJax.
+        $zoomsettings = ['zoom' => 'DoubleClick', 'alt' => false, 'ctrl' => false, 'cmd' => false, 'shift' => false];
+        foreach ($zoomsettings as $name => $value) {
+            if (!isset($config['options']['menuOptions']['settings'][$name])) {
+                $config['options']['menuOptions']['settings'][$name] = $value;
+            }
         }
         // Les polices de MathJax 4 sont un paquet séparé, cherché par défaut
         // sur cdn.jsdelivr.net : en mode local, on pointe vers la copie
@@ -122,8 +144,9 @@ class mathjax {
             'mathjaxurl' => self::url($serverurl),
             'mathjaxconfig' => json_encode(self::config($serverurl)),
             'lang' => self::language(),
-            // Lu par amd/src/question.js, ignoré par le chargeur du filtre.
+            // Lus par amd/src/question.js, ignorés par le chargeur du filtre.
             'probeurl' => self::probe_url($serverurl),
+            'chtmlurl' => self::chtml_url($serverurl),
         ];
     }
 

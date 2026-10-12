@@ -31,7 +31,21 @@ avec des problèmes réels de `private/` et de `Library/`.
 - Note : la langue d'une question est figée dans sa tentative par le renderer (le `problemJWT`
   chiffré du `sessionJWT` reprend les paramètres du premier rendu). Changer le réglage
   `language` ne touche que les tentatives commencées ensuite.
-- 8 tests autonomes ajoutés (54/54).
+- **LaTeX brut dans la bulle de prévisualisation des réponses textuelles** (choix « A » d'un menu,
+  mots) — PG les prévisualise par `\verb␟A␟`, délimité par le caractère de contrôle U+001F, que
+  libxml supprime dès `parse()` : MathJax recevait `\verbA`, un `\verb` jamais refermé. Les
+  expressions algébriques n'utilisent pas `\verb`, d'où un défaut limité au texte.
+  `response_parser::fix_verb_delimiters()` remplace ces délimiteurs par un caractère visible absent
+  du texte (`\verb|A|`) avant toute analyse DOM.
+- **Zoom au double-clic** — même principe qu'en 4.5 (`zoom: DoubleClick`), mais MathJax 4 exige en
+  plus, par défaut, la touche Alt : le double-clic seul ne faisait plus rien. Aucune touche
+  requise désormais (`alt`, `ctrl`, `cmd`, `shift` à `false`, sauf réglage contraire du filtre
+  MathJax). Le zoom de MathJax 4 s'ouvre dans une fenêtre (« MathJax Zoomed Expression »).
+- **Rendu plus net des formules** — en mode « local », sortie CHTML (`tex-mml-chtml.js`, vraies
+  polices woff2) au lieu du SVG, plus pâle et un peu flou à la taille du texte. Retenue
+  seulement si la vérification CORS du module AMD réussit (les polices l'exigent) ; sinon repli
+  sur le SVG, comme avant.
+- 12 tests autonomes ajoutés (58/58).
 
 ## 2026101100 — version Moodle 5.3 (`v2.0-moodle53-beta`, branche `MOODLE_503_STABLE`)
 

@@ -198,6 +198,18 @@ check_true('paragraphe « Vous avez obtenu un résultat » retiré (mode différ
 check_true('paragraphe « partie des points » retiré', mb_strpos($frstripped, 'partie des points') === false);
 check_true('les autres paragraphes sont conservés', mb_strpos($frstripped, 'Énoncé conservé.') !== false);
 
+// --- fix_verb_delimiters() : \verb délimité par U+001F (réponses textuelles) --
+echo "\n-- fix_verb_delimiters() --\n";
+$verbhtml = '<button data-bs-content="&lt;script type=&quot;math/tex; mode=display&quot;&gt;\\verb' . "\x1F" . 'A'
+    . "\x1F" . '&lt;/script&gt;">i</button>';
+check('\\verb␟A␟ devient \\verb|A|', strpos(response_parser::fix_verb_delimiters($verbhtml), '\\verb|A|') !== false, true);
+check('délimiteur suivant si le texte contient |',
+    strpos(response_parser::fix_verb_delimiters('\\verb' . "\x1F" . 'a|b' . "\x1F"), '\\verb!a|b!') !== false, true);
+$parsedverb = response_parser::parse(['renderedHTML' => $verbhtml]);
+check_true('le \\verb survit à parse() (plus de U+001F supprimé par libxml)',
+    strpos($parsedverb['html'], '\\verb|A|') !== false);
+check('HTML sans U+001F inchangé', response_parser::fix_verb_delimiters('<p>\\verb|x|</p>'), '<p>\\verb|x|</p>');
+
 // --- transform() : formules <script type="math/tex"> (MathJax 4) ------------
 echo "\n-- transform() / texdelimiters --\n";
 // Sortie réelle de PG 4b3e564 (PGbasicmacros.pl), mode d'affichage « MathJax ».

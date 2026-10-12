@@ -19,7 +19,7 @@ class response_parser {
      * @return array{html:string, css:string[], js:string[], fieldnames:string[], allfieldnames:string[]}
      */
     public static function parse(array $result): array {
-        $fullhtml = $result['renderedHTML'] ?? '';
+        $fullhtml = self::fix_verb_delimiters($result['renderedHTML'] ?? '');
 
         if ($fullhtml !== '' && preg_match('/<form\b[^>]*id=["\']problemMainForm["\'][^>]*>(.*)<\/form>/is', $fullhtml, $m)) {
             $forminner = $m[1];
@@ -244,6 +244,36 @@ class response_parser {
             $text = $display ? '\\[' . $tex . '\\]' : '\\(' . $tex . '\\)';
             $script->parentNode->replaceChild($script->ownerDocument->createTextNode($text), $script);
         }
+    }
+
+    /**
+     * Rend lisibles les \verb de PG, délimités par le caractère de contrôle
+     * U+001F.
+     *
+     * PG prévisualise les réponses textuelles (choix « A », mots...) par
+     * \verb␟A␟. libxml supprime ce caractère dès le premier chargement DOM
+     * (parse()), et MathJax recevait \verbA : un \verb délimité par « A »,
+     * jamais refermé, affiché en LaTeX brut dans la bulle de
+     * prévisualisation. Les expressions algébriques n'utilisent pas \verb,
+     * d'où un défaut limité aux réponses textuelles. Appelée sur le HTML
+     * brut, avant toute analyse DOM.
+     */
+    public static function fix_verb_delimiters(string $html): string {
+        if (strpos($html, "\x1F") === false) {
+            return $html;
+        }
+        return preg_replace_callback('/\\\\verb\x1F([^\x1F]*)\x1F/', function ($m) {
+            // Délimiteurs sans signification en HTML (le texte est parfois
+            // dans un attribut échappé : ni <, >, & ni guillemets).
+            foreach (['|', '!', '+', '=', '@', ':', ';', '/', '*', '~', '-'] as $delimiter) {
+                if (strpos($m[1], $delimiter) === false) {
+                    return '\\verb' . $delimiter . $m[1] . $delimiter;
+                }
+            }
+            $escaped = str_replace(['\\', '{', '}', '$', '#', '%', '^', '_', '~'],
+                ['\\backslash ', '\\{', '\\}', '\\$', '\\#', '\\%', '\\^{}', '\\_', '\\~{}'], $m[1]);
+            return '\\text{' . $escaped . '}';
+        }, $html);
     }
 
     /**

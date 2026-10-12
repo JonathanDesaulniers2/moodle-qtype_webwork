@@ -117,7 +117,7 @@ const withoutEnrichment = (json) => {
  * vérification CORS, c'est le sien qui sert : une seule instance quand
  * même.
  *
- * @param {Object} params {mathjaxurl, mathjaxconfig, lang, probeurl}, voir classes/mathjax.php
+ * @param {Object} params {mathjaxurl, mathjaxconfig, lang, probeurl, chtmlurl}, voir classes/mathjax.php
  * @returns {Promise}
  */
 const getMathJax = (params) => {
@@ -133,7 +133,9 @@ const getMathJax = (params) => {
                 return null;
             }
             MathJaxLoader.configure({
-                mathjaxurl: params.mathjaxurl,
+                // Sortie CHTML (polices web, rendu plus net) si le renderer
+                // envoie l'en-tête CORS ; sinon SVG, sans police à charger.
+                mathjaxurl: allowed && params.chtmlurl ? params.chtmlurl : params.mathjaxurl,
                 mathjaxconfig: allowed ? params.mathjaxconfig : withoutEnrichment(params.mathjaxconfig),
                 lang: params.lang,
             });
