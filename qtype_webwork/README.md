@@ -13,8 +13,12 @@ de questions de Moodle (`question/type/webwork`).
 >   remplace `window.MathJax`, ce qui rendait inutilisable le MathJax v2 que
 >   le plugin chargeait sous 4.x. Le plugin passe désormais par le chargeur
 >   du filtre (`filter_mathjaxloader/loader`) — une seule instance par page —,
->   avec la copie de MathJax 4 du renderer (`pg_files/mathjax-v4/`, sortie
->   SVG) ou celle du CDN configuré dans le filtre. Voir `classes/mathjax.php`.
+>   avec la copie de MathJax 4 du renderer (`pg_files/mathjax-v4/` : sortie
+>   CHTML si le renderer envoie l'en-tête CORS, SVG sinon) ou celle du CDN
+>   configuré dans le filtre. Le plugin y ajoute ce que MathJax 2 faisait sous
+>   4.x : entrée AsciiMath (aperçu de l'éditeur MathView), zoom au double-clic
+>   sans touche à enfoncer, et conversion des `<script type="math/tex">` de PG
+>   en `\(...\)`. Voir `classes/mathjax.php` et `classes/response_parser.php`.
 > - **Bootstrap 5** : Moodle 5 utilise lui aussi Bootstrap 5. La copie
 >   fournie par le renderer n'est plus chargée (deux copies feraient ouvrir
 >   puis refermer aussitôt les menus de Moodle) ; celle de Moodle est prêtée
