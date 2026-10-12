@@ -1,5 +1,20 @@
 # Journal des modifications
 
+## qtype_webwork 2026072851 (report de correctifs de la version Moodle 5.3)
+
+Deux défauts trouvés en validant la version Moodle 5.3 sur une vraie instance (octobre 2026), qui
+touchent aussi cette branche :
+
+- **Résultat visible en mode différé avec le renderer francisé** — `strip_correctness()` ne
+  retirait les paragraphes de score (« You received a score… », « …partial credit… ») qu'en
+  anglais. Avec l'image `fr` et `language=fr-CA`, ils arrivent en français (« Vous avez obtenu un
+  résultat… », « …une partie des points… ») et restaient visibles avant la fin du test.
+- **LaTeX brut dans la bulle des réponses textuelles** (choix « A », mots) — PG les prévisualise
+  par `\verb␟A␟`, délimité par U+001F, que libxml supprime dès `parse()`.
+  `response_parser::fix_verb_delimiters()` le remplace par un délimiteur visible (`\verb|A|`).
+- 7 tests autonomes ajoutés. **Non revalidé sur une vraie instance Moodle 4.5** : publié en
+  pré-release (`-rc`).
+
 ## qtype_webwork + qbank_webworkimport 2026072850 (aperçu dans la banque de questions)
 
 Nouvelle colonne **« Aperçu WeBWorK »** dans la banque de questions : les questions WeBWorK ont un

@@ -685,4 +685,12 @@ function xmldb_qtype_webwork_upgrade($oldversion) {
         // la banque de questions.
         upgrade_plugin_savepoint(true, 2026072850, 'qtype', 'webwork');
     }
+
+    if ($oldversion < 2026072851) {
+        // Pas de changement de schéma -- report des correctifs trouvés en
+        // validant la version Moodle 5.3 : paragraphes de score en français
+        // masqués en mode différé, et \verb des réponses textuelles (PG les
+        // délimite par U+001F, que libxml supprimait).
+        upgrade_plugin_savepoint(true, 2026072851, 'qtype', 'webwork');
+    }
 }

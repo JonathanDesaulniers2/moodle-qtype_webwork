@@ -19,7 +19,7 @@ class response_parser {
      * @return array{html:string, css:string[], js:string[], fieldnames:string[], allfieldnames:string[]}
      */
     public static function parse(array $result): array {
-        $fullhtml = $result['renderedHTML'] ?? '';
+        $fullhtml = self::fix_verb_delimiters($result['renderedHTML'] ?? '');
 
         if ($fullhtml !== '' && preg_match('/<form\b[^>]*id=["\']problemMainForm["\'][^>]*>(.*)<\/form>/is', $fullhtml, $m)) {
             $forminner = $m[1];
@@ -552,6 +552,36 @@ class response_parser {
     }
 
     /**
+     * Rend lisibles les \verb de PG, délimités par le caractère de contrôle
+     * U+001F.
+     *
+     * PG prévisualise les réponses textuelles (choix « A », mots...) par
+     * \verb␟A␟. libxml supprime ce caractère dès le premier chargement DOM
+     * (parse()), et MathJax recevait \verbA : un \verb délimité par « A »,
+     * jamais refermé, affiché en LaTeX brut dans la bulle de
+     * prévisualisation. Les expressions algébriques n'utilisent pas \verb,
+     * d'où un défaut limité aux réponses textuelles. Appelée sur le HTML
+     * brut, avant toute analyse DOM. (Report de la version Moodle 5.3.)
+     */
+    public static function fix_verb_delimiters(string $html): string {
+        if (strpos($html, "\x1F") === false) {
+            return $html;
+        }
+        return preg_replace_callback('/\\\\verb\x1F([^\x1F]*)\x1F/', function ($m) {
+            // Délimiteurs sans signification en HTML (le texte est parfois
+            // dans un attribut échappé : ni <, >, & ni guillemets).
+            foreach (['|', '!', '+', '=', '@', ':', ';', '/', '*', '~', '-'] as $delimiter) {
+                if (strpos($m[1], $delimiter) === false) {
+                    return '\\verb' . $delimiter . $m[1] . $delimiter;
+                }
+            }
+            $escaped = str_replace(['\\', '{', '}', '$', '#', '%', '^', '_', '~'],
+                ['\\backslash ', '\\{', '\\}', '\\$', '\\#', '\\%', '\\^{}', '\\_', '\\~{}'], $m[1]);
+            return '\\text{' . $escaped . '}';
+        }, $html);
+    }
+
+    /**
      * Retire les indicateurs de correction (couleurs correct/incorrect,
      * bulles de rétroaction, résumé de score) du fragment HTML *déjà corrigé*
      * -- utilisé quand la question est configurée pour ne pas révéler si la
@@ -640,10 +670,21 @@ class response_parser {
         self::remove_matches($xpath, '//div[@role="alert"]');
 
         // Retire les paragraphes de score ("You received a score of X% ...").
+        // Repérés par leur texte, dans chaque langue que le renderer peut
+        // renvoyer : avec l'image fr et language=fr-CA, ils arrivent en
+        // français (catalogues fr-CA.renderer.po et fr-CA.po), et un filtre
+        // anglais seul laissait le résultat visible en mode différé.
+        $scoremarkers = [
+            'received a score', 'partial credit',            // Anglais.
+            'avez obtenu un résultat', 'partie des points',  // fr-CA (webwork-renderer).
+        ];
         foreach (iterator_to_array($xpath->query('//p')) as $node) {
             $text = $node->textContent;
-            if (stripos($text, 'received a score') !== false || stripos($text, 'partial credit') !== false) {
-                $node->parentNode->removeChild($node);
+            foreach ($scoremarkers as $marker) {
+                if (mb_stripos($text, $marker) !== false) {
+                    $node->parentNode->removeChild($node);
+                    break;
+                }
             }
         }
     }
